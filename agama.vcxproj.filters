@@ -1,0 +1,337 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>.cpp;.cc</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="NewFilter1">
+      <UniqueIdentifier>{99987632-72b0-49b4-8974-4ba95222c950}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="actions_genfnc.cpp" />
+    <ClCompile Include="actions_focal_distance_finder.cpp" />
+    <ClCompile Include="cubature.cpp" />
+    <ClCompile Include="actions_isochrone.cpp" />
+    <ClCompile Include="actions_spherical.cpp" />
+    <ClCompile Include="coord.cpp" />
+    <ClCompile Include="df_base.cpp" />
+    <ClCompile Include="df_interpolated.cpp" />
+    <ClCompile Include="df_spherical.cpp" />
+    <ClCompile Include="galaxymodel_densitygrid.cpp" />
+    <ClCompile Include="galaxymodel_losvd.cpp" />
+    <ClCompile Include="galaxymodel_selfconsistent.cpp" />
+    <ClCompile Include="galaxymodel_spherical.cpp" />
+    <ClCompile Include="galaxymodel_velocitysampler.cpp" />
+    <ClCompile Include="math_fit.cpp" />
+    <ClCompile Include="math_gausshermite.cpp" />
+    <ClCompile Include="math_geometry.cpp" />
+    <ClCompile Include="math_linalg.cpp" />
+    <ClCompile Include="math_ode.cpp" />
+    <ClCompile Include="math_optimization.cpp" />
+    <ClCompile Include="math_random.cpp" />
+    <ClCompile Include="math_sample.cpp" />
+    <ClCompile Include="math_specfunc.cpp" />
+    <ClCompile Include="math_sphharm.cpp" />
+    <ClCompile Include="orbit.cpp" />
+    <ClCompile Include="orbit_lyapunov.cpp" />
+    <ClCompile Include="particles_io.cpp" />
+    <ClCompile Include="potential_analytic.cpp" />
+    <ClCompile Include="potential_base.cpp" />
+    <ClCompile Include="potential_composite.cpp" />
+    <ClCompile Include="potential_cylspline.cpp" />
+    <ClCompile Include="potential_dehnen.cpp" />
+    <ClCompile Include="potential_disk.cpp" />
+    <ClCompile Include="potential_factory.cpp" />
+    <ClCompile Include="potential_ferrers.cpp" />
+    <ClCompile Include="potential_galpot.cpp" />
+    <ClCompile Include="potential_king.cpp" />
+    <ClCompile Include="potential_multipole.cpp" />
+    <ClCompile Include="potential_spheroid.cpp" />
+    <ClCompile Include="potential_utils.cpp" />
+    <ClCompile Include="utils_config.cpp" />
+    <ClCompile Include="potential_perfect_ellipsoid.cpp" />
+    <ClCompile Include="galaxymodel_jeans.cpp" />
+    <ClCompile Include="torus\chb.cpp" />
+    <ClCompile Include="torus\generatingfunction.cpp" />
+    <ClCompile Include="torus\orb.cpp" />
+    <ClCompile Include="torus\pjmcoords.cpp" />
+    <ClCompile Include="torus\pjmnum.cpp" />
+    <ClCompile Include="torus\point_closedorbitcheby.cpp" />
+    <ClCompile Include="torus\point_none.cpp" />
+    <ClCompile Include="torus\torus.cpp" />
+    <ClCompile Include="torus\toy_isochrone.cpp" />
+    <ClCompile Include="torus\wd_numerics.cpp" />
+    <ClCompile Include="actions_torus.cpp" />
+    <ClCompile Include="math_spline.cpp">
+      <Filter>Header Files</Filter>
+    </ClCompile>
+    <ClCompile Include="utils.cpp" />
+    <ClCompile Include="math_core.cpp" />
+    <ClCompile Include="galaxymodel_base.cpp" />
+    <ClCompile Include="df_factory.cpp" />
+    <ClCompile Include="df_disk.cpp" />
+    <ClCompile Include="Oxford.cpp" />
+    <ClCompile Include="actions2d.cpp" />
+    <ClCompile Include="actions_staeckel.cpp" />
+    <ClCompile Include="obs_los.cpp" />
+    <ClCompile Include="obs_base.cpp" />
+    <ClCompile Include="obs_dust.cpp" />
+    <ClCompile Include="df_halo_new.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="torus\fit2.cpp" />
+    <ClCompile Include="torus\fit.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="alloca.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="actions_base.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="df_base.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="actions_genfnc.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="actions_focal_distance_finder.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="actions_isochrone.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="actions_staeckel.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="cubature.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="debug_utils.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="df_interpolated.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="df_quasiisotropic.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="df_spherical.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="galaxymodel_densitygrid.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="galaxymodel_losvd.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="galaxymodel_selfconsistent.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="galaxymodel_spherical.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="galaxymodel_target.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="galaxymodel_velocitysampler.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="math_base.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="math_fit.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="math_gausshermite.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="math_geometry.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="math_glquadrature.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="math_linalg.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="math_ode.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="math_optimization.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="math_random.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="math_sample.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="math_specfunc.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="math_sphharm.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="math_spline.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="orbit.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="orbit_lyapunov.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Oxford.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="particles_base.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="potential_analytic.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="potential_base.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="potential_composite.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="potential_cylspline.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="potential_dehnen.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="potential_disk.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="potential_factory.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="potential_ferrers.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="potential_galpot.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="potential_king.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="potential_multipole.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="potential_perfect_ellipsoid.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="potential_spheroid.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="potential_utils.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="units.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="utils_config.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="utils.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="galaxymodel_jeans.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="torus\constants.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="torus\fit.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="torus\generatingfunction.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="torus\orb.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="torus\pi.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="torus\pjmcoords.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="torus\point_closedorbitcheby.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="torus\point_none.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="torus\torus.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="torus\units.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="torus\wd_numerics.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="torus\wd_freememory.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="torus\wd_matrix.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="torus\toy_isochrone.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="actions_torus.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="math_core.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="actions_spherical.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="coord.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="galaxymodel_base.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="df_factory.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="df_halo.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="df_disk.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="obs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="actions2d.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="obs_los.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="obs_base.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="obs_dust.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

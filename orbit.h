@@ -236,4 +236,8 @@ inline EXP std::vector<std::pair<coord::PosVelT<CoordT>, double> > integrateTraj
     return output;
 }
 
+EXP void makeSoS(const coord::PosVelCyl&, const potential::BasePotential&,
+		    std::vector<double>&, std::vector<double>&, int&);
+
+
 }  // namespace

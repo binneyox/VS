@@ -49,7 +49,62 @@ inline EXP coord::PosVelSph getPosVel(const double data[6])
     phi = math::wrapAngle(phi);
     return coord::PosVelSph(r, theta, phi, data[3] * signr, data[4] * signt, data[5] * signr * signt);
 }
+/// function to use in locating the exact time of the x-y plane crossing
+class FindCrossingPointZequal0: public math::IFunction {
+	public:
+		FindCrossingPointZequal0(const math::BaseOdeSolver& _solver) :
+		    solver(_solver) {};
+    /** used in root-finder to locate the root z(t)=0 */
+		virtual void evalDeriv(const double time, double* val, double* der, double*) const
+		{
+			if(val)
+				*val = solver.getSol(time, 1);  // z
+			if(der)
+				*der = solver.getSol(time, 3);  // vz
+		}
+		virtual unsigned int numDerivs() const { return 1; }
+	private:
+		const math::BaseOdeSolver& solver;
+};
+
+/// function to use in ODE integrator
+class EXP OrbitIntegratorRzPlane: public math::IOdeSystem {
+	public:
+		OrbitIntegratorRzPlane(const potential::BasePotential& p, double Lz) :
+		    poten(p), Lz2(Lz*Lz) {};
+
+    /** apply the equations of motion in R,z plane without tracking the azimuthal motion.
+        Integration variables are: R, z, vR, vz, dR, dz, dvR, dvz
+        R here can have a negative sign (this happens for Lz=0, when the orbit flips to x<0
+        and crosses the z=0 plane at negative 'R', but we compute the potential derivatives at |R|,
+        and multiply by sign(R) when necessary.
+    */
+		virtual void eval(const double /*t*/, const double x[], double dxdt[]) const
+		{
+			coord::GradCyl grad;
+			double signR = x[0]>=0 ? 1 : -1;
+			coord::PosCyl pos(fabs(x[0]), x[1], 0);
+			poten.eval(pos, NULL, &grad, NULL);
+			double Lz2ovR4 = Lz2>0 ? Lz2/pow_2(pow_2(pos.R)) : 0;
+			dxdt[0] = x[2];
+			dxdt[1] = x[3];
+			dxdt[2] = -(grad.dR - Lz2ovR4 * pos.R) * signR;
+			dxdt[3] = - grad.dz;
+		}
+
+		virtual unsigned int size() const { return 4; }  // two coordinates and two velocities
+	private:
+		const potential::BasePotential& poten;
+		const double Lz2;
+};
+
 }
+
+static const double ACCURACY_INTEGR = 1e-8;
+
+static const double ACCURACY_Zcoord = 1e-5;
+/// upper limit on the number of timesteps in ODE solver
+static const unsigned int MAX_NUM_STEPS_ODE = 2000;
 
 template<typename CoordT>
 StepResult RuntimeTrajectory<CoordT>::processTimestep(
@@ -240,6 +295,44 @@ coord::PosVelT<CoordT> integrate(
             break;
     }
     return coord::PosVelT<CoordT>(vars);
+}
+
+
+EXP void makeSoS(const coord::PosVelCyl& Rz, const potential::BasePotential& poten,
+		 std::vector<double>& Rs,
+		 std::vector<double>& pRs, int& Npt)
+{
+	const double Lz=Rz.R*Rz.vphi;
+	double vars[4] = {Rz.R, Rz.z, Rz.vR, Rz.vz};
+	OrbitIntegratorRzPlane odeSystem(poten, Lz);
+	math::OdeSolverDOP853 solver(odeSystem, ACCURACY_INTEGR);
+	solver.init(vars);
+	bool finished = false;
+	unsigned int numStepsODE = 0;
+	double timeCurr = 0;
+	double z_last = Rz.z;
+	Rs.clear(); pRs.clear();
+	while(!finished) {
+		if(solver.doStep() <= 0 || numStepsODE >= MAX_NUM_STEPS_ODE) { // signal of error
+			printf("Only %zd points after %d steps to t=%g of orbit for SoS from (%f %f %f %f)\n",
+			       Rs.size(),numStepsODE,timeCurr,Rz.R,Rz.z,Rz.vR,Rz.vz);
+			return;
+		} else {
+			numStepsODE++;
+			double timePrev = timeCurr;
+			timeCurr = solver.getTime();
+			//if(timeStepTraj!=INFINITY)
+			// Check for upward crossing of z=0
+			if(z_last * solver.getSol(timeCurr, 1) <= 0 && solver.getSol(timeCurr,3)>0) {
+				double timeCross = math::findRoot(FindCrossingPointZequal0(solver),
+					timePrev, timeCurr, ACCURACY_Zcoord);
+				Rs.push_back( solver.getSol(timeCross, 0));
+				pRs.push_back(solver.getSol(timeCross, 2));
+			}
+			z_last = solver.getSol(timeCurr, 1);
+			finished = Rs.size()>=Npt;
+		}
+	}
 }
 
 // explicit template instantiations to make sure all of them get compiled

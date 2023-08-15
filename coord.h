@@ -170,12 +170,11 @@ struct EXP ProlMod{
 
 struct EXP UVSph{
 	double Delta, Delta2;     ///< Delta^2 = gamma - alpha > 0
-	UVSph(double D){
-		if(Delta<=0)
-			throw std::invalid_argument("Invalid parameters for UV Spheroidal coordinate system");
-		Delta = D; Delta2 = D*D;
+	UVSph(double D=1) : Delta(D), Delta2(D*D) {
+		if(D<=0)
+			throw std::invalid_argument("Invalid D for UV Spheroidal coordinate system\n");
+		//Delta = D; Delta2 = D*D;
 	}
-	UVSph(){}
 	void set(double D){
 		Delta=D; Delta2=D*D;
 	}
@@ -275,6 +274,7 @@ template<> struct EXP PosT<UVSph>{
 	const UVSph& coordsys;  ///< a point means nothing without specifying its coordinate system
 	PosT<UVSph>(double _u, double _v, double _phi, const UVSph& _coordsys):
 	    u(_u), v(_v), phi(_phi), coordsys(_coordsys) {};
+	PosT<UVSph> (const UVSph& _coordsys) : coordsys(_coordsys) {};
 };
 typedef struct EXP PosT<UVSph> PosUVSph;
 ///@}
@@ -481,8 +481,8 @@ typedef struct EXP PosMomT<Car> PosMomCar;
 /// combined position and momentum in cylindrical coordinates
 template<> struct EXP PosMomT<Cyl>: public PosCyl, public MomCyl {
 	PosMomT<Cyl>() {};
-    /// initialize from position and velocity
-	PosMomT<Cyl>(const PosCyl& pos, const MomCyl& vel) : PosCyl(pos), MomCyl(vel) {}
+    /// initialize from position and momenta
+	PosMomT<Cyl>(const PosCyl& pos, const MomCyl& mom) : PosCyl(pos), MomCyl(mom) {}
     /// initialize from explicitly given numbers
 	PosMomT<Cyl>(double _R, double _z, double _phi, double _pR, double _pz, double _pphi) :
 	    PosCyl(_R, _z, _phi), MomCyl(_pR, _pz, _pphi) {};
@@ -498,11 +498,11 @@ typedef struct EXP PosMomT<Cyl> PosMomCyl;
 /// combined position and momentum in spherical coordinates
 template<> struct EXP PosMomT<Sph>: public PosSph, public MomSph {
 	PosMomT<Sph>() {};
-    /// initialize from position and velocity
+    /// initialize from position and momenta
 	PosMomT<Sph>(const PosSph& pos, const MomSph& mom) : PosSph(pos), MomSph(mom) {}
     /// initialize from explicitly given numbers
-	PosMomT<Sph>(double _r, double _theta, double _phi, double _vr, double _vtheta, double _vphi) :
-	    PosSph(_r, _theta, _phi), MomSph(_vr, _vtheta, _vphi) {};
+	PosMomT<Sph>(double _r, double _theta, double _phi, double _pr, double _ptheta, double _pphi) :
+	    PosSph(_r, _theta, _phi), MomSph(_pr, _ptheta, _pphi) {};
     /// initialize from an array of 6 floats (i.e., from a serialized array)
 	PosMomT<Sph>(const double p[]) :
 	    PosSph(p[0], p[1], p[2]), MomSph(p[3], p[4], p[5]) {};
@@ -513,19 +513,20 @@ template<> struct EXP PosMomT<Sph>: public PosSph, public MomSph {
 typedef struct EXP PosMomT<Sph> PosMomSph;
 
 /// canonically conjugate coordinate and momenta in modified spherical coordinates
-template<> struct EXP PosVelT<SphMod>: public PosSphMod {
+template<> struct EXP PosMomT<SphMod>: public PosSphMod {
 	double pr;   ///< p_r   = v_r = dr/dt
 	double ptau; ///< p_tau = -2 * r * v_theta / (1+tau^2)
 	double pphi; ///< p_phi = R * v_phi
-	PosVelT<SphMod>() {};
-	PosVelT<SphMod>(double _r, double _tau, double _phi, double _pr, double _ptau, double _pphi) :
+	PosMomT<SphMod>() {};
+	PosMomT<SphMod>(double _r, double _tau, double _phi, double _pr, double _ptau, double _pphi) :
 	    PosSphMod(_r, _tau, _phi), pr(_pr), ptau(_ptau), pphi(_pphi) {};
 };
-typedef struct EXP PosVelT<SphMod> PosVelSphMod;
+typedef struct EXP PosMomT<SphMod> PosMomSphMod;
 
 /// position and velocity in UV prolate spheroidal coordinates
 template<> struct EXP PosVelT<UVSph>: public PosUVSph{
 	double udot, vdot, phidot;  ///< time derivatives of position variables
+	PosVelT<UVSph>(const UVSph& coordsys) : PosUVSph(coordsys) {};
 	PosVelT<UVSph>(const PosUVSph& pos, double _udot, double _vdot, double _phidot):
 	    PosUVSph(pos), udot(_udot), vdot(_vdot), phidot(_phidot) {};
 	void unpack_to(double *out) const {
@@ -533,9 +534,10 @@ template<> struct EXP PosVelT<UVSph>: public PosUVSph{
 };
 typedef struct EXP PosVelT<UVSph> PosVelUVSph;
 
-/// position and velocity in UV prolate spheroidal coordinates
+/// position and momentum in UV prolate spheroidal coordinates
 template<> struct EXP PosMomT<UVSph>: public PosUVSph, public MomUVSph {
 	double udot, vdot, phidot;  ///< time derivatives of position variables
+	PosMomT<UVSph>(const UVSph& cordsys) : PosUVSph(coordsys)  {};
 	PosMomT<UVSph>(const PosUVSph& pos, const MomUVSph& mom):
 	    PosUVSph(pos), MomUVSph(mom) {};
 	void unpack_to(double *out) const {
@@ -667,13 +669,19 @@ template<> struct EXP PosDerivT<Cyl, Car> {
     double dxdR, dxdphi, dydR, dydphi;
 };
 template<> struct EXP PosDerivT<Cyl, Sph> {
-    double drdR, drdz, dthetadR, dthetadz;
+	double drdR, drdz, dthetadR, dthetadz;
+};
+template<> struct EXP PosDerivT<Cyl, SphMod> {
+	double drdR, drdz, dtaudR, dtaudz;
 };
 template<> struct EXP PosDerivT<Sph, Car> {
     double dxdr, dxdtheta, dxdphi, dydr, dydtheta, dydphi, dzdr, dzdtheta;
 };
 template<> struct EXP PosDerivT<Sph, Cyl> {
-    double dRdr, dRdtheta, dzdr, dzdtheta;
+	double dRdr, dRdtheta, dzdr, dzdtheta;
+};
+template<> struct EXP PosDerivT<SphMod, Cyl> {
+	double dRdr, dRdtau, dzdr, dzdtau;
 };
 template<> struct EXP PosDerivT<Cyl, ProlSph> {
 	double dlambdadR, dlambdadz, dnudR, dnudz;
@@ -692,6 +700,9 @@ template<> struct EXP PosDerivT<Cyl, UVSph> {
 };
 template<> struct EXP PosDerivT<UVSph, Cyl> {
 	double dRdu, dRdv, dzdu, dzdv;
+};
+template<> struct EXP PosDerivT<UVSph, SphMod> {
+	double dRdr, dRdtau, dzdr, dzdtau;
 };
 
 
@@ -720,7 +731,10 @@ template<> struct EXP PosDeriv2T<Car, Sph> {
         d2phidx2, d2phidxdy, d2phidy2;
 };
 template<> struct EXP PosDeriv2T<Cyl, Sph> {
-    double d2rdR2, d2rdRdz, d2rdz2, d2thetadR2, d2thetadRdz, d2thetadz2;
+	double d2rdR2, d2rdRdz, d2rdz2, d2thetadR2, d2thetadRdz, d2thetadz2;
+};
+template<> struct EXP PosDeriv2T<Cyl, SphMod> {
+	double d2rdR2, d2rdRdz, d2rdz2, d2taudR2, d2taudRdz, d2taudz2;
 };
 template<> struct EXP PosDeriv2T<Cyl, ProlSph> {
 	double d2lambdadR2, d2lambdadRdz, d2lambdadz2, d2nudR2, d2nudRdz, d2nudz2;
@@ -765,7 +779,7 @@ template<typename srcCS>
 inline PosCyl toPosCyl(const PosT<srcCS>& from) { return toPos<srcCS, Cyl>(from); }
 template<typename srcCS>
 inline PosSph toPosSph(const PosT<srcCS>& from) { return toPos<srcCS, Sph>(from); }
-template<typename srcCS>//dont we need  here?
+template<typename srcCS>
 inline PosUVSph toPosUVSph(const PosT<srcCS>& from) { return toPos<srcCS, UVSph>(from); }
 
 
@@ -812,6 +826,20 @@ inline PosMomSph toPosMomSph(const PosMomT<srcCS>& from) { return toPosMom<srcCS
 template<typename srcCS, typename destCS>
 EXP PosMomT<destCS> toPosMom(const PosMomT<srcCS>& from, const destCS& coordsys);
 
+/** universal templated conversion function between PosVel and PosMom types
+    template parameters srcCS and destCS may be any of the coordinate system names */
+template<typename srcCS, typename destCS>
+EXP PosMomT<destCS> toPosMom(const PosVelT<srcCS>& from);
+
+/** templated conversion functions for coordinates and velocities
+    with names reflecting the target coordinate system. */
+template<typename srcCS>
+inline PosVelCar toPosMomCar(const PosVelT<srcCS>& from) { return toPosMom<srcCS, Car>(from); }
+template<typename srcCS>
+inline PosVelCyl toPosMomCyl(const PosVelT<srcCS>& from) { return toPosMom<srcCS, Cyl>(from); }
+template<typename srcCS>
+inline PosVelSph toPosMomSph(const PosVelT<srcCS>& from) { return toPosMom<srcCS, Sph>(from); }
+
 /** trivial conversions */
 template<> inline PosMomCar toPosMom<Car,Car>(const PosMomCar& p) { return p;}
 template<> inline PosMomCyl toPosMom<Cyl,Cyl>(const PosMomCyl& p) { return p;}
@@ -821,10 +849,21 @@ template<> inline PosMomSph toPosMom<Sph,Sph>(const PosMomSph& p) { return p;}
  ** system into account and involving both Vel and Mom*/
 template<typename srcCS, typename destCS>
 EXP PosMomT<destCS> toPosMom(const PosVelT<srcCS>& from, const destCS& coordsys);
+
 template<typename srcCS, typename destCS>
 EXP PosVelT<destCS> toPosVel(const PosMomT<srcCS>& from);
+template<typename srcCS>
+inline PosVelCyl toPosVelCyl(const PosMomT<srcCS>& from) { return toPosVel<srcCS, Cyl>(from); }
 
+
+/*
+ *Compute pu and pv from uv coords and VelCyl
+*/
 EXP void UVmomenta(const PosUVSph&,const VelCyl&,double&,double&);
+
+/*
+ *Compute vR and vz from uv coords and pu and pv
+*/
 EXP void Rzmomenta(const PosUVSph&,const double,const double,VelCyl&);
 
 
@@ -841,7 +880,11 @@ EXP void Rzmomenta(const PosUVSph&,const double,const double,VelCyl&);
     \return     point in destCS coordinate system. */
 template<typename srcCS, typename destCS>
 EXP PosT<destCS> toPosDeriv(const PosT<srcCS>& from, 
-    PosDerivT<srcCS, destCS>* deriv, PosDeriv2T<srcCS, destCS>* deriv2=NULL);
+			    PosDerivT<srcCS, destCS>* deriv, PosDeriv2T<srcCS, destCS>* deriv2=NULL);
+
+template<typename srcCS, typename destCS>//dervs in dirn needed for GF
+EXP PosT<destCS> toPosDerivR(const PosT<srcCS>& from, 
+			    PosDerivT<destCS, srcCS>* deriv, PosDeriv2T<destCS, srcCS>* deriv2=NULL);
 
 /** templated conversion with derivatives, taking the parameters of coordinate system into account */
 template<typename srcCS, typename destCS>
@@ -1009,6 +1052,9 @@ void evalAndConvertSph(const math::IFunction& F,
 /// compute the total angular momentum for a point in the given coordinate system CoordT
 template<typename CoordT>
 EXP double Ltotal(const PosVelT<CoordT> &p);
+
+template<typename CoordT>
+EXP double Ltotal(const PosMomT<CoordT> &p);
 
 /// compute the z-component of angular momentum for a point in the given coordinate system CoordT
 template<typename CoordT>

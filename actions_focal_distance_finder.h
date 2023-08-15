@@ -56,17 +56,18 @@ EXP double estimateFocalDistancePoints(
 */
 EXP double estimateFocalDistanceShellOrbit(
     const potential::BasePotential& poten, double E, double Lz, 
-    double* R=0);
+    double* R=0, double* Jz=NULL);
 
 /// function to be used in root-finder for locating the thin orbit in R-z plane
 class EXP FindClosedOrbitRZplane: public math::IFunction {
 	public:
 		FindClosedOrbitRZplane(const potential::BasePotential& p, 
 				       double _E, double _Lz, double _Rmin, double _Rmax,
-				       double& _timeCross, std::vector<coord::PosCyl>& _traj)
+				       double& _timeCross, std::vector<coord::PosVelCyl>& _traj,
+				      double& _Jz)
 				:
 		    poten(p), E(_E), Lz(_Lz), Rmin(_Rmin), Rmax(_Rmax), 
-		    timeCross(_timeCross), traj(_traj)
+		    timeCross(_timeCross), traj(_traj), Jz(_Jz)
 		{}
     /// report the difference in R between starting point (R0, z=0, vz>0)
     /// and return point (Rcross, z=0, vz<0)
@@ -76,8 +77,9 @@ class EXP FindClosedOrbitRZplane: public math::IFunction {
 		const potential::BasePotential& poten;
 		const double E, Lz;               ///< parameters of motion in the R-z plane
 		const double Rmin, Rmax;          ///< boundaries of interval in R (to skip the first two calls)
+		double& Jz;
 		double& timeCross;                ///< keep track of time required to complete orbit
-		std::vector<coord::PosCyl>& traj; ///< store the trajectory
+		std::vector<coord::PosVelCyl>& traj; ///< store the trajectory
 };
 
 /** find the best-fit value of focal distance for a shell orbit.

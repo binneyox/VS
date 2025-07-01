@@ -65,6 +65,10 @@ inline double R_from_Lz(const BasePotential& potential, double Lz)
     return R_from_L(PotentialWrapper(potential), Lz);
 }
 
+/** Compute the E of a circular orbit with the given angular momentum
+    in a spherical potential represented by a 1d function */
+EXP double E_circ(const BasePotential& potential, double L, double* _Rc = NULL, double* _Vc = NULL);
+
 /** Compute the radius corresponding to the given value of potential represented by a 1d function */
 EXP double R_max(const math::IFunction& potential, double Phi);
 
@@ -72,7 +76,14 @@ EXP double R_max(const math::IFunction& potential, double Phi);
     (convenience overload) */
 inline double R_max(const BasePotential& potential, double Phi)
 {
-    return R_max(PotentialWrapper(potential), Phi);
+	return R_max(PotentialWrapper(potential), Phi);
+}
+
+/** Compute the distance along x axis corresponding to the given value of potential
+    (convenience overload) */
+inline double z_max(const BasePotential& potential, double Phi)
+{
+	return R_max(PotentialWrapperZ(potential), Phi);
 }
 
 /** Compute epicycle frequencies for a circular orbit in the equatorial plane with radius R.

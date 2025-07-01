@@ -43,29 +43,29 @@ static const double GLRATIO = 2.0;
 
 /** helper class to find the root of  Phi(R) = E */
 class RmaxRootFinder: public math::IFunction {
-    const math::IFunction& poten;
-    const double E;
-public:
-    RmaxRootFinder(const math::IFunction& _poten, double _E) : poten(_poten), E(_E) {}
-    virtual void evalDeriv(const double logR, double* val=0, double* deriv=0, double* =0) const
-    {
-        double Phi, dPhidR, R = exp(logR);
-        poten.evalDeriv(R, &Phi, &dPhidR);
-        if(val) {
-            *val = Phi - E;
-            if(!isFinite(*val)) {  // take special measures
-                if(E==-INFINITY)
-                    *val = Phi==E ? 0 : +1.0;
-                else if(Phi==-INFINITY)
-                    *val = -1.0;  // safely negative value
-                else if(R>=HUGE_NUMBER)
-                    *val = +1.0;
-            }
-        }
-        if(deriv)
-            *deriv = dPhidR * R;
-    }
-    virtual unsigned int numDerivs() const { return 1; }
+	const math::IFunction& poten;
+	const double E;
+	public:
+		RmaxRootFinder(const math::IFunction& _poten, double _E) : poten(_poten), E(_E) {}
+		virtual void evalDeriv(const double logR, double* val=0, double* deriv=0, double* =0) const
+		{
+			double Phi, dPhidR, R = exp(logR);
+			poten.evalDeriv(R, &Phi, &dPhidR);
+			if(val) {
+				*val = Phi - E;
+				if(!isFinite(*val)) {  // take special measures
+					if(E==-INFINITY)
+						*val = Phi==E ? 0 : +1.0;
+					else if(Phi==-INFINITY)
+						*val = -1.0;  // safely negative value
+					else if(R>=HUGE_NUMBER)
+						*val = +1.0;
+				}
+			}
+			if(deriv)
+				*deriv = dPhidR * R;
+		}
+		virtual unsigned int numDerivs() const { return 1; }
 };
 
 /** helper class to find the root of  Phi(R) + 1/2 R dPhi/dR = E
@@ -232,7 +232,7 @@ public:
         coord::HessCyl d2Phi;
         pot.eval(coord::PosCyl(r,0,0), &Phi, &dPhi, &d2Phi);
         double expE  = invPhi0 - 1/Phi;
-        double nu2Om = d2Phi.dz2 / dPhi.dR * r;  // ratio of nu^2/Omega^2
+	double nu2Om = d2Phi.dz2 / dPhi.dR * r;  // ratio of nu^2/Omega^2
         double dnu2Om=0, d2nu2Om=0;  // 1st and 2nd derivatives of the above ratio w.r.t. log(r)
         if(der || der2) {
             // compute these derivatives by finite differences
@@ -244,7 +244,7 @@ public:
             pot.eval(coord::PosCyl(rM,0,0), NULL, &dPhiM, &d2PhiM);
             double nu2OmP = d2PhiP.dz2 / dPhiP.dR * rP, nu2OmM = d2PhiM.dz2 / dPhiM.dR * rM;
             dnu2Om = (nu2OmP - nu2OmM) / (2*delta);
-            d2nu2Om= (nu2OmP + nu2OmM - 2*nu2Om) / pow_2(delta);
+	    d2nu2Om= (nu2OmP + nu2OmM - 2*nu2Om) / pow_2(delta);
             if(fabs(d2nu2Om) < delta)
                 d2nu2Om = 0;
         }
@@ -268,7 +268,7 @@ public:
 }  // internal namespace
 
 
-std::vector<double> createInterpolationGrid(const BasePotential& potential, double accuracy)
+EXP std::vector<double> createInterpolationGrid(const BasePotential& potential, double accuracy)
 {
     // create a grid in log-radius with spacing depending on the local variation of the potential
     std::vector<double> grid = math::createInterpolationGrid(ScalePhi(potential), accuracy);
@@ -285,7 +285,7 @@ std::vector<double> createInterpolationGrid(const BasePotential& potential, doub
     return grid;
 }
 
-double v_circ(const math::IFunction& potential, double radius)
+EXP double v_circ(const math::IFunction& potential, double radius)
 {
     if(radius==0)
         return isFinite(potential.value(0)) ? 0 : INFINITY;
@@ -295,11 +295,11 @@ double v_circ(const math::IFunction& potential, double radius)
 //    return sqrt(radius * dPhidr);
 }
 
-double R_circ(const math::IFunction& potential, double energy) {
+EXP double R_circ(const math::IFunction& potential, double energy) {
     return exp(math::findRoot(RcircRootFinder(potential, energy), math::ScalingInf(), ACCURACY_ROOT));
 }
 
-double R_from_L(const math::IFunction& potential, double L) {
+EXP double R_from_L(const math::IFunction& potential, double L) {
     if(L==0)
         return 0;
     if(fabs(L) == INFINITY)
@@ -307,11 +307,19 @@ double R_from_L(const math::IFunction& potential, double L) {
     return exp(math::findRoot(RfromLRootFinder(potential, L), math::ScalingInf(), ACCURACY_ROOT));
 }
 
-double R_max(const math::IFunction& potential, double energy) {
+EXP double E_circ(const BasePotential& potential, const double L, double* _Rc, double* _Vc){
+	double Rc = R_from_Lz(potential, L);
+	if(_Rc) *_Rc = Rc;
+	double Vc = v_circ(potential, Rc);
+	if(_Vc) *_Vc = Vc;
+	return .5*pow_2(Vc)+potential.value(coord::PosCyl(Rc,0,0));
+}
+
+EXP double R_max(const math::IFunction& potential, double energy) {
     return exp(math::findRoot(RmaxRootFinder(potential, energy), math::ScalingInf(), ACCURACY_ROOT));
 }
 
-void epicycleFreqs(const BasePotential& potential, const double R,
+EXP void epicycleFreqs(const BasePotential& potential, const double R,
     double& kappa, double& nu, double& Omega)
 {
     if(!isZRotSymmetric(potential))
@@ -328,7 +336,7 @@ void epicycleFreqs(const BasePotential& potential, const double R,
     Omega = sqrt(gradR_over_R);
 }
 
-double innerSlope(const math::IFunction& potential, double* Phi0, double* coef)
+EXP double innerSlope(const math::IFunction& potential, double* Phi0, double* coef)
 {
     // this routine shouldn't suffer from cancellation errors, provided that
     // the potential and its derivatives are computed accurately,
@@ -344,7 +352,7 @@ double innerSlope(const math::IFunction& potential, double* Phi0, double* coef)
     return s;
 }
 
-void findPlanarOrbitExtent(const BasePotential& potential, double E, double L, double& R1, double& R2)
+EXP void findPlanarOrbitExtent(const BasePotential& potential, double E, double L, double& R1, double& R2)
 {
     if(!isAxisymmetric(potential))
         throw std::invalid_argument("findPlanarOrbitExtent only works for axisymmetric potentials");
@@ -415,7 +423,7 @@ void findPlanarOrbitExtent(const BasePotential& potential, double E, double L, d
 
 // -------- Same tasks implemented as an interpolation interface -------- //
 
-Interpolator::Interpolator(const BasePotential& potential) :
+EXP Interpolator::Interpolator(const BasePotential& potential) :
     invPhi0(1./potential.value(coord::PosCyl(0,0,0)))
 {
     if(!isZRotSymmetric(potential))
@@ -530,7 +538,7 @@ Interpolator::Interpolator(const BasePotential& potential) :
     RofPhi = math::QuinticSpline(gridPhi, gridLogR, gridPhider);
 }
 
-void Interpolator::evalDeriv(const double R, double* val, double* deriv, double* deriv2) const
+EXP void Interpolator::evalDeriv(const double R, double* val, double* deriv, double* deriv2) const
 {
     double logR = log(R);
     if(logR > PhiofR.xvalues().back() && coefOut!=0)
@@ -557,7 +565,7 @@ void Interpolator::evalDeriv(const double R, double* val, double* deriv, double*
             * dPhidscaledPhi / pow_2(R);
 }
 
-double Interpolator::innerSlope(double* Phi0, double* coef) const
+EXP double Interpolator::innerSlope(double* Phi0, double* coef) const
 {
     double val, der, logr = PhiofR.xvalues().front();
     PhiofR.evalDeriv(logr, &val, &der);
@@ -579,7 +587,7 @@ double Interpolator::innerSlope(double* Phi0, double* coef) const
     }
 }
 
-double Interpolator::R_max(const double E, double* deriv) const
+EXP double Interpolator::R_max(const double E, double* deriv) const
 {
     double scaledE, dEdscaledE, logR;
     scaleE(E, invPhi0, scaledE, dEdscaledE);
@@ -598,7 +606,7 @@ double Interpolator::R_max(const double E, double* deriv) const
     return R;
 }
 
-double Interpolator::L_circ(const double E, double* deriv) const
+EXP double Interpolator::L_circ(const double E, double* deriv) const
 {
     if(!(E>=1./invPhi0 && E<=0)) {
         if(deriv)
@@ -626,7 +634,7 @@ double Interpolator::L_circ(const double E, double* deriv) const
     return Lcirc;
 }
 
-double Interpolator::R_from_Lz(const double Lz, double* deriv) const
+EXP double Interpolator::R_from_Lz(const double Lz, double* deriv) const
 {
     double logL = log(fabs(Lz)), logR, logRder;
     RofL.evalDeriv(logL, &logR, deriv!=NULL ? &logRder : NULL);
@@ -646,7 +654,7 @@ double Interpolator::R_from_Lz(const double Lz, double* deriv) const
     return Rcirc;
 }
 
-double Interpolator::R_circ(const double E, double* deriv) const
+EXP double Interpolator::R_circ(const double E, double* deriv) const
 {
     if(!(E>=1./invPhi0 && E<=0)) {
         if(deriv)
@@ -673,7 +681,7 @@ double Interpolator::R_circ(const double E, double* deriv) const
     return Rcirc;
 }
 
-void Interpolator::epicycleFreqs(double R, double& kappa, double& nu, double& Omega) const
+EXP void Interpolator::epicycleFreqs(double R, double& kappa, double& nu, double& Omega) const
 {
     double dPhi, d2Phi;
     evalDeriv(R, NULL, &dPhi, &d2Phi);
@@ -683,7 +691,7 @@ void Interpolator::epicycleFreqs(double R, double& kappa, double& nu, double& Om
     nu    = sqrt(freqNu(log(R)) * dPhidR_over_R);  // nu^2 = Omega^2 * spline-interpolated fnc
 }
 
-void Interpolator::epicycle_ratios(double Lc,double *rats) const{
+EXP void Interpolator::epicycle_ratios(double Lc,double *rats) const{
 	double R=R_from_Lz(Lc,NULL),kappa,nu,Om;
 	epicycleFreqs(R,kappa,nu,Om);
 	rats[0]=Om/kappa; rats[1]=nu/Om;
@@ -692,7 +700,7 @@ void Interpolator::epicycle_ratios(double Lc,double *rats) const{
 
 // --------- 2d interpolation of peri/apocenter radii in equatorial plane --------- //
 
-Interpolator2d::Interpolator2d(const BasePotential& potential) :
+EXP Interpolator2d::Interpolator2d(const BasePotential& potential) :
     Interpolator(potential),
     invPhi0(1./potential.value(coord::PosCyl(0,0,0)))  // -infinity <= Phi(0) < 0
 {
@@ -800,7 +808,7 @@ Interpolator2d::Interpolator2d(const BasePotential& potential) :
     intR2 = math::QuinticSpline2d(gridX, gridY, gridW2, gridW2dX, gridW2dY);
 }
 
-void Interpolator2d::findPlanarOrbitExtent(double E, double L,
+EXP void Interpolator2d::findPlanarOrbitExtent(double E, double L,
     double &R1, double &R2) const
 {
     double Lc   = L_circ(E);
@@ -819,13 +827,14 @@ void Interpolator2d::findPlanarOrbitExtent(double E, double L,
 
 //---- Correspondence between h and E ----//
 
-PhaseVolume::PhaseVolume(const math::IFunction& pot)
+EXP PhaseVolume::PhaseVolume(const math::IFunction& pot)
 {
     double Phi0 = pot(0);
-    if(!(Phi0<0))
-        throw std::invalid_argument("PhaseVolume: invalid value of Phi(r=0)");
+    if(!(Phi0<0)){
+	    printf("PhaseVolume: invalid value of Phi(r=0)");
+	    throw std::invalid_argument("PhaseVolume: invalid value of Phi(r=0)");
+    }
     invPhi0 = 1/Phi0;
-
     // create grid in log(r)
     std::vector<double> gridr = math::createInterpolationGrid(
         ScalePhi(FunctionToPotentialWrapper(pot)), ACCURACY_INTERP);
@@ -925,7 +934,7 @@ PhaseVolume::PhaseVolume(const math::IFunction& pot)
     EofH = math::QuinticSpline(gridH, gridE, gridG);
 }
 
-void PhaseVolume::evalDeriv(const double E, double* h, double* g, double*) const
+EXP void PhaseVolume::evalDeriv(const double E, double* h, double* g, double*) const
 {
     // out-of-bounds value of energy returns 0 or infinity, but not NAN
     if(!(E * invPhi0 < 1)) {
@@ -948,7 +957,7 @@ void PhaseVolume::evalDeriv(const double E, double* h, double* g, double*) const
         *g *= val / dEdscaledE;
 }
 
-double PhaseVolume::E(const double h, double* g, double* dgdh) const
+EXP double PhaseVolume::E(const double h, double* g, double* dgdh) const
 {
     if(h==0) {
         if(g) *g=0;
@@ -971,7 +980,7 @@ double PhaseVolume::E(const double h, double* g, double* dgdh) const
     return realE;
 }
 
-double PhaseVolume::deltaE(const double logh1, const double logh2, double* g1) const
+EXP double PhaseVolume::deltaE(const double logh1, const double logh2, double* g1) const
 {
     //return E(exp(logh1), g1) - E(exp(logh2)); //<-- naive implementation
     double scaledE1, scaledE2, E1, E2, E1minusE2, scaledE1deriv;

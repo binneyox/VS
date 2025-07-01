@@ -18,6 +18,51 @@ struct Actions {
                      ///< axisymmetric case, can have any value)
     Actions() {};
     Actions(double _Jr, double _Jz, double _Jphi) : Jr(_Jr), Jz(_Jz), Jphi(_Jphi) {};
+    Actions& operator *= (const double a){
+	    Jr*=a; Jz*=a; Jphi*=a;
+	    return *this;
+    }
+    const Actions operator * (const double a) const{
+	    return Actions(Jr*a, Jz*a, Jphi*a);
+    }
+    const Actions operator / (const double a) const{
+	    return Actions(Jr/a, Jz/a, Jphi/a);
+    }
+    Actions& operator += (const Actions Jp){
+	    Jr += Jp.Jr; Jz += Jp.Jz; Jphi += Jp.Jphi;
+	    return *this;
+    }
+    const Actions operator + (const Actions Jp) const{
+	    return Actions(Jr+Jp.Jr, Jz+Jp.Jz, Jphi+Jp.Jphi);
+    }
+};
+
+/** Frequencies of motion (Omega = dH/dJ) */
+struct Frequencies {
+	double Omegar;    ///< frequency of radial motion, dH/dJr
+	double Omegaz;    ///< frequency of vertical motion, dH/dJz
+	double Omegaphi;  ///< frequency of azimuthal motion, dH/dJphi
+
+	Frequencies() {};
+	Frequencies(double omr, double omz, double omphi) : Omegar(omr), Omegaz(omz), Omegaphi(omphi) {};
+	Frequencies& operator *= (const double a){
+		Omegar*=a; Omegaz*=a; Omegaphi*=a;
+		return *this;
+	}
+	const Frequencies operator * (const double a) const{
+		return Frequencies(Omegar*a, Omegaz*a, Omegaphi*a);
+	}
+	const Frequencies operator / (const double a) const{
+		return Frequencies(Omegar/a, Omegaz/a, Omegaphi/a);
+	}
+	Frequencies& operator += (const Frequencies fr){
+		Omegar += fr.Omegar; Omegaz += fr.Omegaz; Omegaphi += fr.Omegaphi;
+		return *this;
+	}
+	const Frequencies operator + (const Frequencies fr) const{
+		return Frequencies(Omegar+fr.Omegar, Omegaz+fr.Omegaz,
+				   Omegaphi+fr.Omegaphi);
+	}
 };
 
 /** Angles in arbitrary potential */
@@ -25,38 +70,50 @@ struct Angles {
     double thetar;   ///< phase angle of radial motion
     double thetaz;   ///< phase angle of vertical motion
     double thetaphi; ///< phase angle of azimuthal motion
+
     Angles() {};
     Angles(double tr, double tz, double tphi) : thetar(tr), thetaz(tz), thetaphi(tphi) {};
+    Angles(Frequencies Om) : thetar(Om.Omegar), thetaz(Om.Omegaz), thetaphi(Om.Omegaphi) {};
+    Angles& operator *= (const double a){
+	    thetar*=a; thetaz*=a; thetaphi*=a;
+	    return *this;
+    }
+    const Angles operator * (const double a) const{
+	    return Angles(thetar*a, thetaz*a, thetaphi*a);
+    }
+    Angles& operator += (const Angles thetap){
+	    thetar += thetap.thetar; thetaz += thetap.thetaz; thetaphi += thetap.thetaphi;
+	    return *this;
+    }
+    const Angles operator + (const Angles thetap) const{
+	    return Angles(thetar+thetap.thetar, thetaz+thetap.thetaz, thetaphi+thetap.thetaphi);
+    }
 };
 
 /** A combination of both actions and angles */
 struct ActionAngles: Actions, Angles {
     ActionAngles() {};
     ActionAngles(const Actions& acts, const Angles& angs) : Actions(acts), Angles(angs) {};
+    ActionAngles(const double Jr,const double Jz,const double Jphi,
+		 const double thetar,const double thetaz,const double thetaphi):
+	    Actions(Jr,Jz,Jphi), Angles(thetar,thetaz,thetaphi){}
 };
 
-/** Frequencies of motion (Omega = dH/dJ) */
-struct Frequencies {
-    double Omegar;    ///< frequency of radial motion, dH/dJr
-    double Omegaz;    ///< frequency of vertical motion, dH/dJz
-    double Omegaphi;  ///< frequency of azimuthal motion, dH/dJphi
-    Frequencies() {};
-    Frequencies(double omr, double omz, double omphi) : Omegar(omr), Omegaz(omz), Omegaphi(omphi) {};
-};
 
 /** Derivatives of coordinate/momentum variables w.r.t actions:
     each of three member fields stores the derivative of 6 pos/vel elements by the given action,
     in an inverted notation:  e.g.,  d(v_phi)/d(J_z) = dbyJz.vphi */
 template <typename CoordT> struct DerivAct {
-    coord::PosVelT<CoordT> dbyJr, dbyJz, dbyJphi;
+    coord::PosMomT<CoordT> dbyJr, dbyJz, dbyJphi;
 };
+typedef struct EXP DerivAct<coord::Cyl> DerivActCyl;
 
 /** Derivatives of coordinate/momentum variables w.r.t angles:
     each of three member fields stores the derivative of 6 pos/vel elements by the given angle */
 template <typename CoordT> struct DerivAng {
-    coord::PosVelT<CoordT> dbythetar, dbythetaz, dbythetaphi;
+    coord::PosMomT<CoordT> dbythetar, dbythetaz, dbythetaphi;
 };
-
+typedef struct EXP DerivAng<coord::Cyl> DerivAngCyl;
 
 /** Base class for action finders, which convert position/velocity pair to action/angle pair */
 class EXP BaseActionFinder{
@@ -126,12 +183,12 @@ public:
                     if not NULL, must point to an array of length `numParams()`;
         \return     pos/vel coordinates.
     */
-    virtual coord::PosVelT<CoordT> map(
+    virtual coord::PosMomT<CoordT> map(
         const ActionAngles& actAng,
         Frequencies* freq=NULL,
         DerivAct<CoordT>* derivAct=NULL,
         DerivAng<CoordT>* derivAng=NULL,
-        coord::PosVelT<CoordT>* derivParam=NULL) const = 0;
+        coord::PosMomT<CoordT>* derivParam=NULL) const = 0;
 };
 
 /** Base class for point transformations that map canonically conjugate coordinate/momentum

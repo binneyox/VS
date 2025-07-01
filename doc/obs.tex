@@ -94,11 +94,11 @@ then {\tt coord::PosCar xyz(sun.toCar(p,sKpc))} stores in {\tt xyz}  the Galacto
 Cartesian coordinates asociated with {\tt p,sKpc}. 
 
 \nwsec
-Similarly if {\tt v,Vlos} are a proper motion in Galactic coords and a
+Similarly if {\tt mulb,Vlos} are a proper motion in Galactic coords and a
 line-of-sight velocity in km/s, we can write {\tt
-coord::PosVelCar xv(sun.toCar(p,sKpc,v,Vlos))}. We can also write
+coord::PosVelCar xv(sun.toCar(p,sKpc,mulb,Vlos))}. We can also write
 {\tt
-coord::PosVelCyl Rv(sun.toCyl(p,sKpc,v,Vlos))} to get the corresponding cylindrical
+coord::PosVelCyl Rv(sun.toCyl(p,sKpc,mulb,Vlos))} to get the corresponding cylindrical
 coordinates. 
 
 \nwsec
@@ -109,7 +109,7 @@ pv} (in either cylindrical or Cartesian coords) {\tt PosVelSky
 lbpm(sun.toSky(pv,sKpc,Vlos))} returns $(\ell,b)$ astrometry, distance and
 line-of-sight velocity (kpc, km/s).  If {\tt pv} gives 6d coords in either
 cylindrical or Cartesian coords, we can extract just the proper motion and
-line-of-sight velocity: {\tt VelSky v(sun.toPM(pv,Vlos)))}.
+line-of-sight velocity: {\tt VelSky mulb(sun.toPM(pv,Vlos)))}.
 
 \nwsec
 If {\tt p} is a 3d position in either Cylindrical or Cartesian coords, {\tt
@@ -145,7 +145,7 @@ by {\tt BaseDustModel} one can add any number of blobs, spirals or clouds.
 
 \nwsec
 {\tt DustModel dsty(Rd,z0,dAvds,Rw,Hw,\&sun)} or
-{\tt DustModel dsty(gasDens,dAvds,\&sun)} or
+{\tt DustModel dsty(gasDens,dAvds,\&sun)}
 make {\tt dsty} 
 a {\tt DustModel} that's just the corresponding {\tt BaseDustModel} with a
 specified location of the Sun and the dust density normalised to {\tt dAvds}
@@ -156,7 +156,7 @@ $A_V$ mag per kpc at the Sun.
 p}.
 
 \nwsec
-{\tt dsty.addBlob(p,Ampl,rad)} adds a Gaussian blob of density centred on {\tt
+{\tt dsty.addBlob(p,Ampl,rad)} adds a Gaussian blob of dust centred on {\tt
 p}, {\tt Ampl} and {\tt rad} being the amplitude and scale radius of the
 blob:
 $$
@@ -198,7 +198,7 @@ Lulian \& Toomre (1966) -- see Binney (2020).
 \nwsec
 The classes for los in our Galaxy and los to distant galaxies are derived
 from the class {\tt BaseLos}. A {\tt BaseLos} provides methods to convert
-$(\ell,b)$ astrometry and a distance to a location {\tt p}, and conversely.
+$(\ell,b)$ astrometry and a distance to a location {\tt p}.
 Similarly, it provides methods to convert a phase-space location into a
 distance and line-of-sight velocity. Finally, if a dust model is specified it
 can give the extinction in the $V,B,R,H,K$ bands at distance $s$.
@@ -216,16 +216,13 @@ With {\tt Los} an instance of any line of sight, the relevant methods are
 {\tt Los.s(p)} returns the distance (intUnits) to {\tt p} ({\tt PosCar} {\tt PosCyl})
 
 \nwsec
-{\tt Los.sKpc(p)} returns the distance (kpc) to {\tt p} ({\tt PosCar} {\tt PosCyl})
-
-\nwsec
 {\tt Los.sVlos(xv)} returns a {\tt std::pair<double,double>} comprising the
 distance and $V_{\rm los}$ (both in intUnits) of the phase-space point {\tt xv} ({\tt PosVelCar} or
 {\tt PosVelCyl}) 
 
 \nwsec
-{\tt Los.A\_V(sKpc)} returns the $V$ band extinction to {\tt sKpc} -- {\tt
-Los.A\_H(sKc)} gives the H-band extinction, etc.
+{\tt Los.A\_V(s)} returns the $V$ band extinction to {\tt s} -- {\tt
+Los.A\_H(s)} gives the H-band extinction, etc.
 
 \nwsec
 {\tt extLos} is a class of los through distant external galaxies. Since this
@@ -236,7 +233,8 @@ often negative.
 
 \nwsec
 {\tt extLos Los(xs,ys,incl,D,from\_Kpc)} makes Los the line of sight that is
-{\tt xs} (kpc) parallel to the the apparent major axis, {\tt ys} (kpc)
+{\tt xs} (int units) parallel to the the apparent major axis, {\tt ys} (inr
+units)
 parallel to the apparent minor axis of a galaxy that has inclination {\tt
 incl} (degrees) and is {\tt D} Mpc from us. Created thus, there is no dust so all extinctions $A_V$ etc
 vanish.
@@ -252,7 +250,7 @@ Galaxy, but it could be used for lines of sight to nearby galaxies such as
 the LMC or M31.
 
 \nwsec
-{\tt SunLos Los(ps,Sun)} with {\tt pos} a sky position and {\tt Sun} a {\tt
+{\tt SunLos Los(pos,Sun)} with {\tt pos} a sky position and {\tt Sun} a {\tt
 solarShifter} makes {\tt Los} a dustless los at {\it pos}.
 
 \nwsec

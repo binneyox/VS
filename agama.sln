@@ -5,8 +5,6 @@ VisualStudioVersion = 16.0.31112.23
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "agama", "agama.vcxproj", "{1F57A5B7-7179-4A17-BAD1-EC052867D0D0}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "otherAGAMA", "..\otherAGAMA\otherAGAMA.vcxproj", "{B8CC0B0B-BAFF-4B21-83B9-207890C2C7A0}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64

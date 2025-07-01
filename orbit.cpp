@@ -49,22 +49,43 @@ inline EXP coord::PosVelSph getPosVel(const double data[6])
     phi = math::wrapAngle(phi);
     return coord::PosVelSph(r, theta, phi, data[3] * signr, data[4] * signt, data[5] * signr * signt);
 }
-/// function to use in locating the exact time of the x-y plane crossing
+/// function to use in locating the exact time of crossing the x-y plane
 class FindCrossingPointZequal0: public math::IFunction {
 	public:
-		FindCrossingPointZequal0(const math::BaseOdeSolver& _solver) :
-		    solver(_solver) {};
+		FindCrossingPointZequal0(const math::BaseOdeSolver& _solver, const double _z0=0) :
+		    solver(_solver), z0(_z0) {};
     /** used in root-finder to locate the root z(t)=0 */
 		virtual void evalDeriv(const double time, double* val, double* der, double*) const
 		{
 			if(val)
-				*val = solver.getSol(time, 1);  // z
+				*val = solver.getSol(time, 1) - z0;  // z
 			if(der)
 				*der = solver.getSol(time, 3);  // vz
 		}
 		virtual unsigned int numDerivs() const { return 1; }
 	private:
 		const math::BaseOdeSolver& solver;
+		const double z0;
+};
+/// function to use in locating the exact time of crossing r=rbar
+class FindCrossingPoint_rbar: public math::IFunction {
+	public:
+		FindCrossingPoint_rbar(const math::BaseOdeSolver& _solver, const double _rbar) :
+		    solver(_solver), rbar(_rbar) {};
+    /** used in root-finder to locate the root r-rbar=0 */
+		virtual void evalDeriv(const double time, double* val, double* der, double*) const
+		{
+			double R=solver.getSol(time, 0), z=solver.getSol(time, 1);
+			double r = sqrt(R*R + z*z);
+			if(val)
+				*val = r - rbar;
+			if(der)
+				*der = (R*solver.getSol(time, 2) + z*solver.getSol(time, 3))/r;
+		}
+		virtual unsigned int numDerivs() const { return 1; }
+	private:
+		const math::BaseOdeSolver& solver;
+		const double rbar;
 };
 
 /// function to use in ODE integrator
@@ -97,6 +118,30 @@ class EXP OrbitIntegratorRzPlane: public math::IOdeSystem {
 		const potential::BasePotential& poten;
 		const double Lz2;
 };
+/// function to use in ODE integrator for HenonHeiles etc
+class EXP OrbitIntegratorXzPlane: public math::IOdeSystem {
+	public:
+		OrbitIntegratorXzPlane(const potential::BasePotential& p) :
+		    poten(p) {};
+
+    /** apply the equations of motion in x,z plane when Lz=0.
+        Integration variables are: x, z, vx, vz, dR, dz, dvR, dvz
+    */
+		virtual void eval(const double /*t*/, const double x[], double dxdt[]) const
+		{
+			coord::GradCyl grad;
+			coord::PosCyl pos(x[0], x[1], 0);
+			poten.eval(pos, NULL, &grad, NULL);
+			dxdt[0] = x[2];
+			dxdt[1] = x[3];
+			dxdt[2] = - grad.dR;
+			dxdt[3] = - grad.dz;
+		}
+
+		virtual unsigned int size() const { return 4; }  // two coordinates and two velocities
+	private:
+		const potential::BasePotential& poten;
+};
 
 }
 
@@ -104,7 +149,7 @@ static const double ACCURACY_INTEGR = 1e-8;
 
 static const double ACCURACY_Zcoord = 1e-5;
 /// upper limit on the number of timesteps in ODE solver
-static const unsigned int MAX_NUM_STEPS_ODE = 2000;
+static const unsigned int MAX_NUM_STEPS_ODE = 20000;
 
 template<typename CoordT>
 StepResult RuntimeTrajectory<CoordT>::processTimestep(
@@ -297,10 +342,9 @@ coord::PosVelT<CoordT> integrate(
     return coord::PosVelT<CoordT>(vars);
 }
 
-
-EXP void makeSoS(const coord::PosVelCyl& Rz, const potential::BasePotential& poten,
-		 std::vector<double>& Rs,
-		 std::vector<double>& pRs, int& Npt)
+EXP coord::PosVelCyl makeSoS(const coord::PosVelCyl& Rz, const potential::BasePotential& poten,
+			     std::vector<double>& Rs,
+			     std::vector<double>& pRs, int Npt, const double z0)
 {
 	const double Lz=Rz.R*Rz.vphi;
 	double vars[4] = {Rz.R, Rz.z, Rz.vR, Rz.vz};
@@ -314,15 +358,99 @@ EXP void makeSoS(const coord::PosVelCyl& Rz, const potential::BasePotential& pot
 	Rs.clear(); pRs.clear();
 	while(!finished) {
 		if(solver.doStep() <= 0 || numStepsODE >= MAX_NUM_STEPS_ODE) { // signal of error
-			printf("Only %zd points after %d steps to t=%g of orbit for SoS from (%f %f %f %f)\n",
-			       Rs.size(),numStepsODE,timeCurr,Rz.R,Rz.z,Rz.vR,Rz.vz);
-			return;
+			return Rz;
 		} else {
 			numStepsODE++;
 			double timePrev = timeCurr;
 			timeCurr = solver.getTime();
-			//if(timeStepTraj!=INFINITY)
+			// Check for upward crossing of z=z0
+			if((z_last-z0) * (solver.getSol(timeCurr, 1)-z0) <= 0 && solver.getSol(timeCurr,3)>0) {
+				double timeCross = math::findRoot(FindCrossingPointZequal0(solver,z0),
+					timePrev, timeCurr, ACCURACY_Zcoord);
+				Rs.push_back( solver.getSol(timeCross, 0));
+				pRs.push_back(solver.getSol(timeCross, 2));
+			}
+			z_last = solver.getSol(timeCurr, 1);
+			finished = Rs.size()>=Npt;
+		}
+	}
+	return coord::PosVelCyl(solver.getSol(timeCurr,0),solver.getSol(timeCurr,1),0,
+				solver.getSol(timeCurr,2),solver.getSol(timeCurr,3),
+				Lz/solver.getSol(timeCurr,0));
+}
+
+EXP coord::PosVelCyl makeSoS(const coord::PosVelCyl& Rz, const potential::BasePotential& poten,
+			     std::vector<double>& Rs, std::vector<double>& pRs, const double rbar,
+			     std::vector<double>& thetas, std::vector<double>& pthetas,
+			     int Npt, const double z0)
+{
+	const double Lz=Rz.R*Rz.vphi;
+	double vars[4] = {Rz.R, Rz.z, Rz.vR, Rz.vz};
+	OrbitIntegratorRzPlane odeSystem(poten, Lz);
+	math::OdeSolverDOP853 solver(odeSystem, ACCURACY_INTEGR);
+	solver.init(vars);
+	bool finished = false;
+	unsigned int numStepsODE = 0;
+	double timeCurr = 0;
+	double z_last = Rz.z, dr_last = sqrt(Rz.R*Rz.R + Rz.z*Rz.z) - rbar;
+	Rs.clear(); pRs.clear();
+	while(!finished) {
+		if(solver.doStep() <= 0 || numStepsODE >= MAX_NUM_STEPS_ODE) { // signal of error
+			return Rz;
+		} else {
+			numStepsODE++;
+			double timePrev = timeCurr;
+			timeCurr = solver.getTime();
 			// Check for upward crossing of z=0
+			if((z_last-z0) * (solver.getSol(timeCurr, 1)-z0) <= 0 && solver.getSol(timeCurr,3)>0) {
+				double timeCross = math::findRoot(FindCrossingPointZequal0(solver,z0),
+					timePrev, timeCurr, ACCURACY_Zcoord);
+				Rs.push_back( solver.getSol(timeCross, 0));
+				pRs.push_back(solver.getSol(timeCross, 2));
+			}
+			// Check for outward crossing of r=rbar
+			double r=sqrt(pow_2(solver.getSol(timeCurr,0)) + pow_2(solver.getSol(timeCurr,1)));
+			if(dr_last * (r - rbar) <= 0 &&
+			   solver.getSol(timeCurr,2)>0) {
+				double timeCross = math::findRoot(FindCrossingPoint_rbar(solver, rbar),
+					timePrev, timeCurr, ACCURACY_Zcoord);
+				coord::PosMomCyl Rzp(solver.getSol(timeCross,0),solver.getSol(timeCross,1),0,
+					solver.getSol(timeCross,2),solver.getSol(timeCross,3),Lz);
+				coord::PosMomSph rtheta(coord::toPosMomSph(Rzp));
+				thetas.push_back(rtheta.theta);
+				pthetas.push_back(rtheta.ptheta);
+			}
+			z_last = solver.getSol(timeCurr, 1);
+			dr_last = r - rbar;
+			finished = Rs.size()>=Npt;
+		}
+	}
+	return coord::PosVelCyl(solver.getSol(timeCurr,0),solver.getSol(timeCurr,1),0,
+				solver.getSol(timeCurr,2),solver.getSol(timeCurr,3),
+				Lz/solver.getSol(timeCurr,0));
+}
+
+EXP coord::PosVelCyl makeSoSXz(const coord::PosVelCyl& Rz, const potential::BasePotential& poten,
+			     std::vector<double>& Rs,
+			     std::vector<double>& pRs, int Npt)
+{
+	double vars[4] = {Rz.R, Rz.z, Rz.vR, Rz.vz};
+	OrbitIntegratorXzPlane odeSystem(poten);
+	math::OdeSolverDOP853 solver(odeSystem, ACCURACY_INTEGR);
+	solver.init(vars);
+	bool finished = false;
+	unsigned int numStepsODE = 0;
+	double timeCurr = 0;
+	double z_last = Rz.z;
+	Rs.clear(); pRs.clear();
+	while(!finished) {
+		if(solver.doStep() <= 0 || numStepsODE >= MAX_NUM_STEPS_ODE) { // signal of error
+			printf("Error in orbit: %f %d\n",solver.doStep(),numStepsODE);
+			return Rz;
+		} else {
+			numStepsODE++;
+			double timePrev = timeCurr;
+			timeCurr = solver.getTime();
 			if(z_last * solver.getSol(timeCurr, 1) <= 0 && solver.getSol(timeCurr,3)>0) {
 				double timeCross = math::findRoot(FindCrossingPointZequal0(solver),
 					timePrev, timeCurr, ACCURACY_Zcoord);
@@ -333,6 +461,8 @@ EXP void makeSoS(const coord::PosVelCyl& Rz, const potential::BasePotential& pot
 			finished = Rs.size()>=Npt;
 		}
 	}
+	return coord::PosVelCyl(solver.getSol(timeCurr,0),solver.getSol(timeCurr,1),0,
+				solver.getSol(timeCurr,2),solver.getSol(timeCurr,3),0);
 }
 
 // explicit template instantiations to make sure all of them get compiled

@@ -35,6 +35,7 @@ The fundamental routines operating on these structures are the following:
   in different coordinate systems.
 */
 #pragma once
+#include <cassert>
 #include "math_core.h"
 #include "math_base.h"
 #include "math_spline.h"
@@ -181,6 +182,7 @@ struct EXP UVSph{
 	static const char* name() { return "UV Prolate spheroidal"; }
 };
 
+EXP UVSph interpUVSph(const double, const UVSph&, const UVSph&);
 
 ///@}
 /// \name   Primitive data types: position in different coordinate systems
@@ -537,7 +539,7 @@ typedef struct EXP PosVelT<UVSph> PosVelUVSph;
 /// position and momentum in UV prolate spheroidal coordinates
 template<> struct EXP PosMomT<UVSph>: public PosUVSph, public MomUVSph {
 	double udot, vdot, phidot;  ///< time derivatives of position variables
-	PosMomT<UVSph>(const UVSph& cordsys) : PosUVSph(coordsys)  {};
+	PosMomT<UVSph>(const UVSph& coordsys) : PosUVSph(coordsys)  {};
 	PosMomT<UVSph>(const PosUVSph& pos, const MomUVSph& mom):
 	    PosUVSph(pos), MomUVSph(mom) {};
 	void unpack_to(double *out) const {
@@ -834,16 +836,12 @@ EXP PosMomT<destCS> toPosMom(const PosVelT<srcCS>& from);
 /** templated conversion functions for coordinates and velocities
     with names reflecting the target coordinate system. */
 template<typename srcCS>
-inline PosVelCar toPosMomCar(const PosVelT<srcCS>& from) { return toPosMom<srcCS, Car>(from); }
+inline PosMomCar toPosMomCar(const PosVelT<srcCS>& from) { return toPosMom<srcCS, Car>(from); }
 template<typename srcCS>
-inline PosVelCyl toPosMomCyl(const PosVelT<srcCS>& from) { return toPosMom<srcCS, Cyl>(from); }
+inline PosMomCyl toPosMomCyl(const PosVelT<srcCS>& from) { return toPosMom<srcCS, Cyl>(from); }
 template<typename srcCS>
-inline PosVelSph toPosMomSph(const PosVelT<srcCS>& from) { return toPosMom<srcCS, Sph>(from); }
+inline PosMomSph toPosMomSph(const PosVelT<srcCS>& from) { return toPosMom<srcCS, Sph>(from); }
 
-/** trivial conversions */
-template<> inline PosMomCar toPosMom<Car,Car>(const PosMomCar& p) { return p;}
-template<> inline PosMomCyl toPosMom<Cyl,Cyl>(const PosMomCyl& p) { return p;}
-template<> inline PosMomSph toPosMom<Sph,Sph>(const PosMomSph& p) { return p;}
 
 /** more templated conversion taking the parameters of coordinate
  ** system into account and involving both Vel and Mom*/
@@ -853,7 +851,8 @@ EXP PosMomT<destCS> toPosMom(const PosVelT<srcCS>& from, const destCS& coordsys)
 template<typename srcCS, typename destCS>
 EXP PosVelT<destCS> toPosVel(const PosMomT<srcCS>& from);
 template<typename srcCS>
-inline PosVelCyl toPosVelCyl(const PosMomT<srcCS>& from) { return toPosVel<srcCS, Cyl>(from); }
+inline PosVelCyl toPosVelCyl(const PosMomT<srcCS>& from) {
+	return toPosVel<srcCS, Cyl>(from); }
 
 
 /*
@@ -1060,6 +1059,15 @@ EXP double Ltotal(const PosMomT<CoordT> &p);
 template<typename CoordT>
 EXP double Lz(const PosVelT<CoordT> &p);
 
+/// Compute the cross product of 2 Cartesian vectors
+inline std::vector<double> crossProduct(const std::vector<double>& b,const std::vector<double>& c){
+	std::vector<double> a;
+	a.push_back(b[1]*c[2]-b[2]*c[1]);
+	a.push_back(b[2]*c[0]-b[0]*c[2]);
+	a.push_back(b[0]*c[1]-b[1]*c[0]);
+	return a;
+}
+
 ///@}
 /// \section 3d rotations
 ///@{
@@ -1068,7 +1076,7 @@ EXP double Lz(const PosVelT<CoordT> &p);
     Let (x,y,z) be the source reference frame, and (X,Y,Z) be the rotated target frame.
     The first rotation by angle alpha about the z axis creates an intermediate reference frame
     (x',y',z'), where the axis x' points along the line of nodes of the overall transformation.
-    The second rotation by angle beta about the x' axis tilts the (x',y') plane by angle beta,
+    The second rotation by angle beta about the x' axis tilts the (y',z') plane by angle beta,
     creating a second intermediate reference frame (x'', y'', z'').
     The third rotation by angle gamma about the z'' axis does not change the orientation of z'',
     hence the final axis Z is the same as z'', and beta is the angle between Z and z.
@@ -1090,12 +1098,34 @@ EXP double Lz(const PosVelT<CoordT> &p);
 */
 EXP void makeRotationMatrix(double alpha, double beta, double gamma, double mat[9]);
 
+EXP std::vector<double> makeRotationMatrix(double alpha, double beta, double gamma);
+
 /** transform a 3d vector in cartesian coordinates using the rotation matrix */
 inline void transformVector(const double mat[9], const double vec[3], double result[3])
 {
-    result[0] = mat[0] * vec[0] + mat[1] * vec[1] + mat[2] * vec[2];
-    result[1] = mat[3] * vec[0] + mat[4] * vec[1] + mat[5] * vec[2];
-    result[2] = mat[6] * vec[0] + mat[7] * vec[1] + mat[8] * vec[2];
+	result[0] = mat[0] * vec[0] + mat[1] * vec[1] + mat[2] * vec[2];
+	result[1] = mat[3] * vec[0] + mat[4] * vec[1] + mat[5] * vec[2];
+	result[2] = mat[6] * vec[0] + mat[7] * vec[1] + mat[8] * vec[2];
+}
+//Transform with mat
+inline std::vector<double> TransformVector(const std::vector<double> mat,
+					   const std::vector<double> vec){
+	assert(mat.size()==9 && vec.size()==3 && "Can only transform 3 vectors\n");
+	std::vector<double> result;
+	result.push_back(mat[0] * vec[0] + mat[1] * vec[1] + mat[2] * vec[2]);
+	result.push_back(mat[3] * vec[0] + mat[4] * vec[1] + mat[5] * vec[2]);
+	result.push_back(mat[6] * vec[0] + mat[7] * vec[1] + mat[8] * vec[2]);
+	return result;
+}
+//Transform with the transpose of mat
+inline std::vector<double> unTransformVector(const std::vector<double> mat,
+					   const std::vector<double> vec){
+	assert(mat.size()==9 && vec.size()==3 && "Can only transform 3 vectors\n");
+	std::vector<double> result;
+	result.push_back(mat[0] * vec[0] + mat[3] * vec[1] + mat[6] * vec[2]);
+	result.push_back(mat[1] * vec[0] + mat[4] * vec[1] + mat[7] * vec[2]);
+	result.push_back(mat[2] * vec[0] + mat[5] * vec[1] + mat[8] * vec[2]);
+	return result;
 }
 
 

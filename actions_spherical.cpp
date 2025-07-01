@@ -326,7 +326,7 @@ Angles computeAngles(const coord::PosVelCyl& point,
     \param[in]  Omegar, Omegaz are the corresponding frequencies (computed elsewhere);
     \returns    the point (position+velocity)
 */
-coord::PosVelSphMod mapPointFromActionAngles(const ActionAngles &aa,
+coord::PosMomSphMod mapPointFromActionAngles(const ActionAngles &aa,
     const math::IFunction &potential, const double E, const double L,
     const double R1, const double R2, const double Omegar, const double Omegaz)
 {
@@ -347,7 +347,7 @@ coord::PosVelSphMod mapPointFromActionAngles(const ActionAngles &aa,
     double costheta = sini * sinpsi;                // z/r
     double sintheta = sqrt(1 - pow_2(costheta));    // R/r is always non-negative
     // finally, output position/velocity
-    coord::PosVelSphMod point;
+    coord::PosMomSphMod point;
     point.r    = r;
     point.pr   = vr;
     point.tau  = costheta / (1+sintheta);
@@ -367,8 +367,8 @@ coord::PosVelSphMod mapPointFromActionAngles(const ActionAngles &aa,
     \param[in]  R1,R2  are the peri/apocenter radii, again slightly offset (all computed elsewhere);
     \return  the derivative of position/velocity point by the action that had this offset.
 */
-coord::PosVelSphMod derivPointFromActions(
-    const ActionAngles &aa, const coord::PosVelSphMod &p0, double EPS,
+coord::PosMomSphMod derivPointFromActions(
+    const ActionAngles &aa, const coord::PosMomSphMod &p0, double EPS,
     const ActionFinderSpherical& af, const potential::Interpolator2d &pot,
     const double E, const double R1, const double R2)
 {
@@ -376,7 +376,7 @@ coord::PosVelSphMod derivPointFromActions(
     af.Jr(E, L, &Omegar, &Omegaz);
     double Ra,Rb;
     pot.findPlanarOrbitExtent(E, L, Ra, Rb);
-    coord::PosVelSphMod p = mapPointFromActionAngles(aa, pot, E, L, R1, R2, Omegar, Omegaz);
+    coord::PosMomSphMod p = mapPointFromActionAngles(aa, pot, E, L, R1, R2, Omegar, Omegaz);
     p.r   = (p.r   - p0.r   )/EPS;
     p.pr  = (p.pr  - p0.pr  )/EPS;
     p.tau = (p.tau - p0.tau )/EPS;
@@ -608,7 +608,7 @@ double computeHamiltonianSpherical(const potential::BasePotential& potential, co
     return unscaleE(math::unscale(scaling, zroot), invPhi0);
 }
 
-coord::PosVelCyl mapSpherical(
+coord::PosMomCyl mapSpherical(
     const potential::BasePotential &pot,
     const ActionAngles &aa, Frequencies* freqout)
 {
@@ -626,16 +626,21 @@ coord::PosVelCyl mapSpherical(
     freq.Omegaphi = freq.Omegaz * math::sign(aa.Jphi);
     if(freqout)  // freak out only if requested
         *freqout = freq;
-    return toPosVelCyl(mapPointFromActionAngles(
+    return toPosMomCyl(mapPointFromActionAngles(
         aa, potential::PotentialWrapper(pot), E, L, R1, R2, freq.Omegar, freq.Omegaz));
 }
 
-
 Actions actionsSpherical(
-    const potential::BasePotential& potential, const coord::PosVelCyl& point)
+			 const potential::BasePotential& potential, const coord::PosVelCyl& point)
 {
     double E, L, R1, R2;
     return computeActions(point, potential, E, L, R1, R2);
+}
+
+Actions actionsSpherical(
+			 const potential::BasePotential& potential, const coord::PosMomCyl& point)
+{
+	return actionsSpherical(potential,coord::toPosVelCyl(point));
 }
 
 ActionAngles actionAnglesSpherical(
@@ -746,12 +751,12 @@ double ActionFinderSpherical::E(const Actions& acts) const
 #endif
 }
 
-coord::PosVelSphMod ActionFinderSpherical::map(
+coord::PosMomSphMod ActionFinderSpherical::map(
     const ActionAngles& aa,
     Frequencies* freq,
     DerivAct<coord::SphMod>* derivAct,
     DerivAng<coord::SphMod>*,
-    coord::PosVelSphMod*) const
+    coord::PosMomSphMod*) const
 {
     if(aa.Jr<0 || aa.Jz<0)
         throw std::invalid_argument("mapSpherical: input actions are negative");
@@ -770,7 +775,7 @@ coord::PosVelSphMod ActionFinderSpherical::map(
     double R1, R2;
     pot.findPlanarOrbitExtent(E, L, R1, R2);
     // map the point from action/angles and frequencies
-    coord::PosVelSphMod p0 = mapPointFromActionAngles(aa, pot, E, L, R1, R2, Omegar, Omegaz);
+    coord::PosMomSphMod p0 = mapPointFromActionAngles(aa, pot, E, L, R1, R2, Omegar, Omegaz);
     if(derivAct) {
         // use the fact that dE/dJr = Omega_r, dE/dJz = Omega_z, etc, and find dR{1,2}/dJ{r,z}
         double dPhidR;

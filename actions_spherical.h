@@ -20,8 +20,12 @@ namespace actions {
     or some other error occurs.
 */
 EXP Actions actionsSpherical(
-    const potential::BasePotential& potential,
-    const coord::PosVelCyl& point);
+			     const potential::BasePotential& potential,
+			     const coord::PosVelCyl& point);
+
+EXP Actions actionsSpherical(
+			     const potential::BasePotential& potential,
+			     const coord::PosMomCyl& point);
 
 /** Compute actions, angles and frequencies in a spherical potential.
     \param[in]  potential is the arbitrary spherical potential;
@@ -33,7 +37,7 @@ EXP Actions actionsSpherical(
 */ 
 EXP ActionAngles actionAnglesSpherical(
     const potential::BasePotential& potential,
-    const coord::PosVelCyl& point,
+    const coord::PosMomCyl& point,
     Frequencies* freq=NULL);
 
 
@@ -53,26 +57,26 @@ EXP double computeHamiltonianSpherical(const potential::BasePotential& potential
     \param[out] freq    if not NULL, store the frequencies for these actions.
     \return     position and velocity point
 */
-EXP coord::PosVelCyl mapSpherical(
+EXP coord::PosMomCyl mapSpherical(
     const potential::BasePotential &potential,
     const ActionAngles &actAng, Frequencies* freq=NULL);
 
 
 /** Class for performing transformations between action/angle and coordinate/momentum for
     an arbitrary spherical potential, using 2d interpolation tables */
-class EXP ActionFinderSpherical: public BaseActionFinder, public BaseToyMap<coord::SphMod> {
+class EXP ActionFinderSpherical: public BaseActionFinder {
 public:
     /// Initialize the internal interpolation tables; the potential itself is not used later on
     explicit ActionFinderSpherical(const potential::BasePotential& potential);
 
     virtual Actions actions(const coord::PosVelCyl& point) const;
     virtual ActionAngles actionAngles(const coord::PosVelCyl& point, Frequencies* freq=NULL) const;
-    virtual coord::PosVelSphMod map(
+    virtual coord::PosMomSphMod map(
         const ActionAngles& actAng,
         Frequencies* freq=NULL,
         DerivAct<coord::SphMod>* derivAct=NULL,
         DerivAng<coord::SphMod>* derivAng=NULL,
-        coord::PosVelSphMod* derivParam=NULL) const;
+        coord::PosMomSphMod* derivParam=NULL) const;
 
     /** return the interpolated value of radial action as a function of energy and angular momentum;
         also return the frequencies in Omegar and Omegaz if these arguments are not NULL */

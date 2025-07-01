@@ -9,6 +9,7 @@
 #include "df_base.h"
 #include "smart.h"
 #include "units.h"
+#include "df_spherical.h"
 #include "utils_config.h"
 #define EXP __declspec(dllexport)
 

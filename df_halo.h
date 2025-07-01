@@ -94,7 +94,7 @@ struct ModifiedDoublePowerLawParam{
 	std::string Fname;
 	ModifiedDoublePowerLawParam() :  ///< set default values for all fields (NAN means that it must be set manually)
 	    norm(NAN), J0(NAN), Jcutoff(0), slopeIn(NAN), slopeOut(NAN), cutoffStrength(2),
-	    coefJrIn(NAN), coefJzIn(NAN), rotFrac(0), Jphi0(0), Jcore(0) {}
+	    coefJrIn(NAN), coefJzIn(NAN), Jphi0(0), rotFrac(0), Jcore(0) {}
 };
 
 /** Modified double power-law model.
@@ -140,7 +140,7 @@ struct SinDoublePowerLawParam{
 	std::string Fname;
 	SinDoublePowerLawParam() :  ///< set default values for all fields (NAN means that it must be set manually)
 	    norm(NAN), mass(NAN), J0(NAN), Jcutoff(0), slopeIn(NAN), slopeOut(NAN), cutoffStrength(2),
-	    alpha(0.6), beta(NAN), Fin(NAN), Fout(NAN), rotFrac(0), Jphi0(0), Jcore(0) {}
+	    alpha(0.6), beta(NAN), Fin(NAN), Fout(NAN), Jphi0(0), rotFrac(0), Jcore(0) {}
 };
 
 class EXP SinDoublePowerLaw: public BaseDistributionFunction{
@@ -159,6 +159,38 @@ class EXP SinDoublePowerLaw: public BaseDistributionFunction{
 		virtual void write_params(std::ofstream &strm,const units::InternalUnits &intUnits) const;
 };
 
+struct PlummerParam{
+	double mass;
+	double scaleRadius;
+	double scaleAction;
+	double mu, nu;
+	PlummerParam(): mass(1), scaleRadius(1), scaleAction(1), mu(0), nu(0){}
+};
+class EXP PlummerDF : public BaseDistributionFunction{
+	const PlummerParam par;
+	double norm,Etop,Ebot,Jrtop,cLtop,Jrbot,cLbot;
+	math::LinearInterpolator jrmax;
+	math::LinearInterpolator cls;
+	public:
+		PlummerDF(const PlummerParam&);
+		virtual double value(const actions::Actions& J) const;
+		virtual void write_params(std::ofstream&, const units::InternalUnits&) const;
+};
+
+struct IsochroneParam{
+	double mass;
+	double scaleRadius;
+	double mu, nu;
+	IsochroneParam() : mass(1), scaleRadius(1), mu(0), nu(0) {}
+};
+class EXP IsochroneDF : public BaseDistributionFunction{
+	const IsochroneParam par;
+	double norm;
+	public:
+		IsochroneDF(const IsochroneParam& params);
+		virtual double value(const actions::Actions& J) const;
+		virtual void write_params(std::ofstream& stream,const units::InternalUnits& intUnits) const;
+};
 #include "Oxford.h"
 
 ///@}

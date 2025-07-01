@@ -73,6 +73,7 @@ if the latter is not true, it introduces a generally small additional interpolat
 #pragma once
 #include "potential_base.h"
 #include "actions_base.h"
+#include "actions_spherical.h"
 #include "df_base.h"
 #include "smart.h"
 #include <vector>

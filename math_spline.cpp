@@ -508,13 +508,13 @@ inline void evalCubicSplines(
 #else
     tT = t*T;
     for(unsigned int k=0; k<K; k++) {
-        const double dif = fh[k] - fl[k], Q = 3 * (dl[k] + dh[k]) - 6 * hi * dif;
+	    const double dif = fh[k] - fl[k], Q = 3 * (dl[k] + dh[k]) - 6 * hi * dif;
         if(f)
-            f[k]   = fl[k] * T  +  fh[k] * t  +  (dif * (t-T)  +  (dl[k] * T - dh[k] * t) * h) * tT;
+	    f[k]   = fl[k] * T  +  fh[k] * t  +  (dif * (t-T)  +  (dl[k] * T - dh[k] * t) * h) * tT;
         if(df)
             df[k]  = dl[k] * T  +  dh[k] * t  -  Q * tT;
         if(d2f)
-            d2f[k] = (dh[k] - dl[k]  +  Q * (t-T)) * hi;
+		d2f[k] = (dh[k] - dl[k]  +  Q * (t-T)) * hi;
     }
 #endif
 }
@@ -760,34 +760,42 @@ EXP CubicSpline::CubicSpline(
 
 EXP void CubicSpline::evalDeriv(const double x, double* val, double* deriv, double* deriv2) const
 {
-    int size = xval.size();
-    if(size == 0)
-        throw std::length_error("Empty spline");
-    int index = binSearch(x, &xval[0], size);
-    if(index < 0) {
-        if(val)
-            *val   = fval[0] + (fder[0]==0 ? 0 : fder[0] * (x-xval[0]));
-            // if der==0, will give correct result even for infinite x
-        if(deriv)
-            *deriv = fder[0];
-        if(deriv2)
-            *deriv2= 0;
-        return;
-    }
-    if(index >= size-1) {
-        if(val)
-            *val   = fval[size-1] + (fder[size-1]==0 ? 0 : fder[size-1] * (x-xval[size-1]));
-        if(deriv)
-            *deriv = fder[size-1];
-        if(deriv2)
-            *deriv2= 0;
-        return;
-    }
-    evalCubicSplines<1> (x, xval[index], xval[index+1],
-        &fval[index], &fval[index+1], &fder[index], &fder[index+1],
-        /*output*/ val, deriv, deriv2);
+	int size = xval.size();
+	if(size == 0)
+		throw std::length_error("Empty spline");
+	int index = binSearch(x, &xval[0], size);
+	if(index < 0) {
+		if(val)
+			*val   = fval[0] + (fder[0]==0 ? 0 : fder[0] * (x-xval[0]));
+	    // if der==0, will give correct result even for infinite x
+		if(deriv)
+			*deriv = fder[0];
+		if(deriv2)
+			*deriv2= 0;
+		return;
+	}
+	if(index >= size-1) {
+		if(val)
+			*val   = fval[size-1] + (fder[size-1]==0 ? 0 : fder[size-1] * (x-xval[size-1]));
+		if(deriv)
+			*deriv = fder[size-1];
+		if(deriv2)
+			*deriv2= 0;
+		return;
+	}
+	evalCubicSplines<1> (x, xval[index], xval[index+1],
+			     &fval[index], &fval[index+1], &fder[index], &fder[index+1],
+	/*output*/ val, deriv, deriv2);
 }
 
+EXP void CubicSpline::getCoeffs(const unsigned int ind,
+				double* A0,double* A1,double* A2,double* A3) const{
+	const double dif = fval[ind+1] - fval[ind], h=(xval[ind+1]-xval[ind]);
+	*A0 = fval[ind];
+	*A1 = h * fder[ind];	
+	*A2 = 3 * dif - h * (2*fder[ind] + fder[ind+1]);
+	*A3 = -2 * dif + h * (fder[ind] + fder[ind+1]);
+}
 EXP bool CubicSpline::isMonotonic() const
 {
     if(fval.empty())

@@ -17,6 +17,10 @@
     This interpolator is created and used internally in actions::ActionFinderAxisymFudge class.
 */
 #pragma once
+#include "math_core.h"
+#include "math_fit.h"
+#include "math_ode.h"
+#include "utils.h"
 #include "potential_base.h"
 #include "potential_utils.h"
 #include "math_spline.h"
@@ -56,18 +60,23 @@ EXP double estimateFocalDistancePoints(
 */
 EXP double estimateFocalDistanceShellOrbit(
     const potential::BasePotential& poten, double E, double Lz, 
-    double* R=0, double* Jz=NULL);
+    double* R=0, double* Jz=NULL, std::vector<coord::PosVelCyl>* shell=NULL);
+
+void findCrossingPointV(
+			const potential::BasePotential& poten, double R0, double Lz, double V0,
+			double& timeCross, std::vector<std::pair<coord::PosVelCyl,double> >& traj,
+			double& Rcross, double& dRcrossdV0, double& Jz);
 
 /// function to be used in root-finder for locating the thin orbit in R-z plane
 class EXP FindClosedOrbitRZplane: public math::IFunction {
 	public:
 		FindClosedOrbitRZplane(const potential::BasePotential& p, 
 				       double _E, double _Lz, double _Rmin, double _Rmax,
-				       double& _timeCross, std::vector<coord::PosVelCyl>& _traj,
+				       double& _timeCross, std::vector<std::pair<coord::PosVelCyl,double> >& _traj,
 				      double& _Jz)
 				:
 		    poten(p), E(_E), Lz(_Lz), Rmin(_Rmin), Rmax(_Rmax), 
-		    timeCross(_timeCross), traj(_traj), Jz(_Jz)
+		    Jz(_Jz), timeCross(_timeCross), traj(_traj)
 		{}
     /// report the difference in R between starting point (R0, z=0, vz>0)
     /// and return point (Rcross, z=0, vz<0)
@@ -79,8 +88,14 @@ class EXP FindClosedOrbitRZplane: public math::IFunction {
 		const double Rmin, Rmax;          ///< boundaries of interval in R (to skip the first two calls)
 		double& Jz;
 		double& timeCross;                ///< keep track of time required to complete orbit
-		std::vector<coord::PosVelCyl>& traj; ///< store the trajectory
+		std::vector<std::pair<coord::PosVelCyl,double> >& traj; ///< store the trajectory
 };
+
+//Compute shell orbit from Rsh,Vsh until Vz<0,. Return quarter period
+//and Jz
+EXP std::vector<coord::PosVelCyl> toTop(
+	const potential::BasePotential& poten,
+	double Rsh, double Vsh, double Jphi, double& riseTime, double& Jz);
 
 /** find the best-fit value of focal distance for a shell orbit.
     \param[in] traj  contains the trajectory of this orbit in R-z plane,
@@ -88,17 +103,18 @@ class EXP FindClosedOrbitRZplane: public math::IFunction {
     the variation of `lambda` coordinate for this orbit
     If the best-fit value is negative, it is replaced with zero.
 */
-EXP double fitFocalDistanceShellOrbit(const std::vector<coord::PosVelCyl>& traj);
+EXP double fitFocalDistanceShellOrbit(const std::vector<std::pair<coord::PosVelCyl,double> >& traj);
 
 /// function to be used in root-finder for locating the thin orbit in R-z plane
 class EXP FindRzClosedOrbitV: public math::IFunction {
 	public:
-		FindRzClosedOrbitV(const potential::BasePotential& p, 
-				       double _R0, double _Lz, 
-				       double& _timeCross, std::vector<std::pair<coord::PosVelCyl,double> >& _traj)
+		FindRzClosedOrbitV(const potential::BasePotential& p, double _R0,
+				   double _Lz, double& _timeCross,
+				   std::vector<std::pair<coord::PosVelCyl,double> >& _traj,
+				  double& _Jz)
 				:
 		    poten(p), R0(_R0), Lz(_Lz), 
-		    timeCross(_timeCross), traj(_traj)
+		    timeCross(_timeCross), traj(_traj), Jz(_Jz)
 		{}
     /// report the difference in R between starting point (R0, z=0, vz>0)
     /// and return point (Rcross, z=0, vz<0)
@@ -109,5 +125,6 @@ class EXP FindRzClosedOrbitV: public math::IFunction {
 		const double R0, Lz;               ///< parameters of motion in the R-z plane
 		double& timeCross;                ///< keep track of time required to complete orbit
 		std::vector<std::pair<coord::PosVelCyl,double> >& traj; ///< store the trajectory
+		double& Jz;
 };
 }  // namespace actions

@@ -5,10 +5,40 @@
 #include <stdexcept>
 
 #define DE
+//#define HENON
 
 namespace df{
 
 namespace {  // internal ns
+
+/*Class used to infer H(Jr,L) for a Plummer potential
+ */
+class y_getter : public math::IFunction {
+	const double Jr, L, L0;
+	double cL, Ebot;
+	const math::LinearInterpolator& jrmax;
+	const math::LinearInterpolator& cls;
+	public:
+		y_getter(const double _Jr,const double _L,const double _L0,
+			 const math::LinearInterpolator& _jrmax,
+			 const math::LinearInterpolator& _cls):
+		    Jr(_Jr), L(_L), L0(_L0), jrmax(_jrmax), cls(_cls){
+			cL=(.5*(L+sqrt(L*L+L0*L0)));
+			Ebot=(fmax(jrmax.evalReverse(Jr),cls.evalReverse(cL)));
+			//printf("cL,Ebot %g %g\n",cL,Ebot);
+		}
+		double Eb(){
+			return Ebot;
+		}
+		virtual void evalDeriv(const double E,double* val,double* deriv=NULL, double* deriv2=NULL) const{
+			double Jrmax,cLm;
+			jrmax.evalDeriv(E,&Jrmax); cls.evalDeriv(E,&cLm);
+			if(val) *val = Jr/Jrmax + (cL-cLm)/(cLm-.5*L0);
+		}
+		virtual unsigned int numDerivs() const{
+			return 0;
+		}
+};
 
 /// helper class used in the root-finder to determine the auxiliary
 /// coefficient beta for a cored halo
@@ -177,12 +207,11 @@ EXP DoublePowerLaw::DoublePowerLaw(const DoublePowerLawParam &inparams) :
 
 EXP double DoublePowerLaw::value(const actions::Actions &J) const
 {
+	double L=J.Jz+fabs(J.Jphi);
     // linear combination of actions in the inner part of the model (for J<J0)
-	double hJ  = par.coefJrIn * J.Jr + par.coefJzIn * J.Jz +
-		     (3-par.coefJrIn -par.coefJzIn) * fabs(J.Jphi);
+	double hJ  = L + par.coefJrIn * J.Jr;
     // linear combination of actions in the outer part of the model (for J>J0)
-	double gJ  = par.coefJrOut* J.Jr + par.coefJzOut* J.Jz +
-		     (3-par.coefJrOut-par.coefJzOut)* fabs(J.Jphi);
+	double gJ  = L + par.coefJrOut * J.Jr;
 	double val = par.norm / pow_3(2*M_PI * par.J0) *
 		     math::pow(1 + math::pow(par.J0 / hJ, par.steepness),  par.slopeIn  / par.steepness) *
 		     math::pow(1 + math::pow(gJ / par.J0, par.steepness), -par.slopeOut / par.steepness);
@@ -320,34 +349,94 @@ EXP void SinDoublePowerLaw::write_params(std::ofstream &strm,const units::Intern
 	strm << "beta\t = " << par.beta << '\n';
 }
 
-/*
-EXP double ModifiedDoublePowerLaw::value(const actions::Actions &J) const{
-	const double pisq=pow_2(M_PI);
-	double modJphi = fabs(J.Jphi);
-	double L = J.Jz + modJphi;
-	double c = L/(L+J.Jr), p = modJphi/L;//define circularity & planarity
-	double cJ = J.Jr + .5*L;
-	double jt = pow_2(cJ)/(pow_2(cJ)+pow_2(par.L0));
-//	double jt = pow_2(L)/(pow_2(L)+pow_2(par.L0));
-	double sinr = pow_2(sin(c*M_PI*.5));
-	double facp = (1 + par.Fout*sinr*pow_2(cos(p*M_PI*.5)))/(1+.5*par.Fout*(.5+2/pisq));//Fout biases to planar orbits
-//	double facr=par.Fin*pow_2(cos(.5*M_PI*modJphi/(L+J.Jr)));
-//	double h = cJ/facr*facp;
-//	double facr=pow_2(cos(.5*M_PI*modJphi/(L+J.Jr)));
-//	double h = cJ*(1+par.Fin/facr)*facp;
-		      double facr=(cosh(par.Fin*modJphi/(L+J.Jr)));
-	double h = cJ*.5*(1+facr)*facp;
-	double f = par.norm / pow_3(2*M_PI * par.J0) *
-		   math::pow(1 + par.J0 / h,  par.slopeIn) *
-		   math::pow(1 + h / par.J0, -par.slopeOut);
-	if(par.Jcutoff>0)   // exponential cutoff at large J
-		f *= exp(-math::pow(h / par.Jcutoff, par.cutoffStrength));
-	if(par.Jcore>0) {   // central core of nearly-constant f(J) at small J
-		if(h==0) return par.norm / pow_3(2*M_PI * par.J0);
-		f *= math::pow(1 + par.Jcore/h * (par.Jcore/h - beta), -0.5*par.slopeIn);
+EXP PlummerDF::PlummerDF(const PlummerParam& params): par(params){
+	if(par.mass<=0) printf("PlummerDF: mass must be >0\n");
+	if(par.scaleRadius <= 0) printf("PlummerDF: scaleRadius must be >0\n");
+	FILE* ifile;
+	if(fopen_s(&ifile,"/u/gmb/c/PlummerEs.dat","r"))
+		printf("PlummerDF: I can't find jrmax, cL data\n");
+	std::vector<double> Es,Jrmax,cLs;
+	while(!feof(ifile)){	//load Lc,Jrmax
+		double x,y,z;
+		if(3!=fscanf_s(ifile,"%lf %lf %lf",&x,&y,&z)) break;
+		Es.push_back(x); cLs.push_back(y); Jrmax.push_back(z);
+		//printf("%f %f %f\n",Es.back(),cLs.back(),Jrmax.back());
 	}
-	if(par.rotFrac!=0)  // add the odd part
-		f *= 1 + par.rotFrac * tanh(J.Jphi / par.Jphi0);
-	return f;
-}*/
+	fclose(ifile);
+	jrmax = math::LinearInterpolator(Es,Jrmax);
+	cls =   math::LinearInterpolator(Es,cLs);
+	Etop=Es.back(); Ebot=Es[0];
+	Jrtop=Jrmax.back(); cLtop=cLs.back();
+	Jrbot=Jrmax[0]; cLbot=cLs[0];
+	norm =1;
+	norm = par.mass/totalMass();	printf("norm %g\n",norm);
+	if(norm<1e-10) exit(0);
+}
+EXP void PlummerDF::write_params(std::ofstream& strm, const units::InternalUnits& intUnits) const{
+	strm << "type\t = PlummerDF\n";
+	strm << "mass\t = " << par.mass << "\n";
+	strm << "scaleRadius\t = " << par.scaleRadius << "\n";
+	strm << "scaleAction\t = " << par.scaleAction << "\n";
+	strm << "mu = " << par.mu << " nu = " << par.nu << "\n";
+}
+EXP double PlummerDF::value(const actions::Actions& J) const{
+	double L=J.Jz+fabs(J.Jphi),Jmod=J.Jr+L;
+	double sq0=L*L+2*pow_2(par.scaleAction), muL=par.mu*L*L/sq0, emu=exp(muL);
+	double Jrp=J.Jr/emu, Lp=L*emu, H;
+	if(Jrp>Jrtop || Lp>cLtop)//Kepler limit
+		H=-.5*pow_2(par.mass/(Jrp+Lp+.25*pow_2(par.scaleAction)/Lp));
+	else if(Jrp<Jrbot || Lp<cLbot)//HO limit
+		H=-pow_2(par.mass*.5*par.scaleAction/(.5*par.scaleAction+Jrp+.5*Lp*(1+.5*Lp/par.scaleAction)));
+	else{
+		y_getter yg(Jrp, Lp, par.scaleAction, jrmax, cls);
+		H = math::findRoot(yg,yg.Eb(),Etop,1e-5);
+		if(Jmod>4 && H<-.1){
+			double tr,Jrm,cLm;  yg.evalDeriv(H,&tr);
+			jrmax.evalDeriv(H,&Jrm); cls.evalDeriv(H,&cLm);
+//			double dum=Jrp/Jrm+(cL-cLm)/(cLm-.5*par.scaleAction);
+			printf("PlummerDF error: %g %g %g %g %g\n",H,tr,Jrp,L,Lp);// exit(0);
+			printf("%g %g %g\n",Jrp/Jrm,cLm,(.5*(Lp+sqrt(Lp*Lp+pow_2(par.scaleAction)))-cLm)/(cLm-.5*par.scaleAction));
+		}
+		if(std::isnan(H) || H>=-1e-3){
+			if(J.Jr+L<.1) H=-1;
+			else return 0;
+		}
+	}
+	return norm*pow(-H,3.5);
+}
+EXP IsochroneDF::IsochroneDF(const IsochroneParam& params) : par(params){
+	if(par.mass<=0) printf("IsochronDF: mass must be >0\n");
+	if(par.scaleRadius <= 0) printf("IsochronDF: scaleRadius must be >0\n");
+	norm =1; norm=par.mass/totalMass();
+}
+EXP void IsochroneDF::write_params(std::ofstream& strm, const units::InternalUnits& intUnits) const{
+	strm << "type\t = IsochroneDF\n";
+	strm << "mass\t = " << par.mass << "\n";
+	strm << "scaleRadius\t = " << par.scaleRadius << "\n";
+	strm << "mu\t = " << par.mu << " nu = " << par.nu << "\n";
+}
+#ifdef HENON //DF as given in Henon's paper with obscure scaling
+EXP double IsochroneDF::value(const actions::Actions& J) const{
+	const double fac=sqrt(2)/(pow_3(2*M_PI));
+	double L=J.Jz+fabs(J.Jphi), J0=J.Jr+.5*(L+sqrt(L*L+4*par.mass*par.scaleRadius));
+	double Et=-.5*pow_2(par.mass/J0)*par.scaleRadius/(par.mass);
+	if(Et>=0) return 0;
+	double U=(1+Et);
+	return fac*((48+U*(-53+U*(14+U*(14+U*4))))*sqrt(1-U)
+		    +3*(9+U*(-22+U*4))*acos(U)/sqrt(U+1))/pow(U+1,4);
+}
+#else
+EXP double IsochroneDF::value(const actions::Actions& J) const{
+	const double fac=norm/(sqrt(2)*pow_3(2*M_PI));
+	double L=J.Jz+fabs(J.Jphi), L02=4*par.mass*par.scaleRadius;
+	double sq0=L*L+1.5*L02, muL=par.mu*L*L/sq0, emu=exp(muL);
+	double Lp=L*emu;
+	double J0 = J.Jr/emu + .5*(Lp + sqrt(Lp*Lp+L02));
+	double Et=-.5*pow_2(par.mass/J0)*par.scaleRadius/par.mass;
+	if(Et>=0) return 0;
+	double fac1=fac/(pow(par.mass*par.scaleRadius,1.5)*pow(2*(1+Et),4));
+	return fac1*(sqrt(-Et)*(27+Et*(66+Et*(320+Et*(240+Et*64))))+3*((16*Et-28)*Et-9)*
+		     asin(sqrt(-Et))/sqrt(1+Et));
+}
+#endif
 }  // namespace df

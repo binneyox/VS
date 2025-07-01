@@ -37,6 +37,11 @@ EXP double pow(double x, int n);
     taking shortcuts for a few common values of n such as 0.5 or 2 */
 EXP double pow(double x, double n);
 
+/** return modulus of a complex number */
+EXP double modulus(const std::complex<double>&);
+
+/** return argument of a complex number in units of PI */
+EXP double arg(const std::complex<double>& );
 
 /** wraps the input argument into the range [0,2pi),
     taking the remainder of the division of x by the floating-point constant 2*M_PI

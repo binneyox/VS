@@ -1,5 +1,4 @@
-#pragma once
-#include "math_ODE.h"
+#include "math_ode.h"
 #include "obs.h"
 
 namespace dust{

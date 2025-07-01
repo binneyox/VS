@@ -1,7 +1,6 @@
 #include "galaxymodel_base.h"
 #include "galaxymodel_selfconsistent.h"
 #include "actions_staeckel.h"
-#include "actions_spherical.h"
 #include "potential_composite.h"
 #include "potential_multipole.h"
 #include "potential_cylspline.h"
@@ -70,7 +69,8 @@ EXP void ComponentWithDisklikeDF::update(
 static void updateActionFinder(SelfConsistentModel& model)
 {
     // update the action finder after the potential has been reinitialized
-    std::cout << "done\nUpdating action finder..."<<std::flush;
+	std::cout << "done\nUpdating action finder: isSperical = " <<
+			isSpherical(*model.totalPotential) <<" "<< std::flush;
     if(isSpherical(*model.totalPotential))
         model.actionFinder.reset(new actions::ActionFinderSpherical(*model.totalPotential));
     else
@@ -159,7 +159,7 @@ EXP void updateTotalPotential(SelfConsistentModel& model)
     if(compPot.size()==1)
         model.totalPotential = compPot[0];
     else
-        model.totalPotential.reset(new potential::CompositeCyl(compPot));
+	    model.totalPotential.reset(new potential::CompositeCyl(compPot));
 
     // finally, create the action finder for the new potential
     updateActionFinder(model);

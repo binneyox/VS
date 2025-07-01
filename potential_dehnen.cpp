@@ -81,7 +81,8 @@ public:
                 return result * s2 * (gamma + 4*m) / (pow_2(m * pow_2(1+m)) * (1+m) * 
                 sqrt( (a2 + C5*s2) * pow_3(a2 + C4*s2) ) );
             default:  // shouldn't happen
-                assert(!"Incorrect integration mode in Dehnen potential");
+		    assert(!"Incorrect integration mode in Dehnen potential");
+		    return 0;
         }
     }
 };

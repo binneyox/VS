@@ -1,7 +1,6 @@
 #include "df_factory.h"
 #include "df_disk.h"
 #include "df_halo.h"
-#include "df_spherical.h"
 #include "utils.h"
 #include <cassert>
 #include <stdexcept>
@@ -156,10 +155,36 @@ EXP taperExpParam parsetaperExpParam(
 	par.Fname  = kvmap.getString("PopFile", par.Fname);
 	return par;
 }
+EXP PlummerParam parsePlummerParam(
+				   const utils::KeyValueMap& kvmap,
+				   const units::ExternalUnits& conv)
+{
+	PlummerParam par;
+	par.mass        = kvmap.getDouble("mass"       ,par.mass)       * conv.massUnit;
+	par.scaleRadius = kvmap.getDouble("scaleRadius",par.scaleRadius)* conv.lengthUnit;
+	par.scaleAction = kvmap.getDouble("scaleAction",par.scaleAction)* conv.lengthUnit*conv.velocityUnit;
+	par.mu          = kvmap.getDouble("mu"         ,par.mu);
+	par.nu          = kvmap.getDouble("nu"         ,par.nu);
+	printf("loading Plummer M %f b %f L0 %f mu %f nu %f\n",
+	       par.mass,par.scaleRadius,par.scaleAction,par.mu,par.nu);
+	return par;
+}
+EXP IsochroneParam parseIsochroneParam(
+				       const utils::KeyValueMap& kvmap,
+				       const units::ExternalUnits& conv)
+{
+	IsochroneParam par;
+	par.mass        = kvmap.getDouble("mass"       ,par.mass)       * conv.massUnit;
+	par.scaleRadius = kvmap.getDouble("scaleRadius",par.scaleRadius)* conv.lengthUnit;
+	par.mu          = kvmap.getDouble("mu"         ,par.mu);
+	par.nu          = kvmap.getDouble("nu"         ,par.nu);
+	printf("loading Isochrone M %f b %f mu %f nu %f\n",par.mass,par.scaleRadius,par.mu,par.nu);
+	return par;
+}
 
 EXP OxfordParam parseOxfordParams(
-			      const utils::KeyValueMap& kvmap,
-			      const units::ExternalUnits& conv)
+				  const utils::KeyValueMap& kvmap,
+				  const units::ExternalUnits& conv)
 {
 	OxfordParam par;
 	par.mass      = kvmap.getDouble("mass")    * conv.massUnit;
@@ -277,6 +302,16 @@ EXP PtrDistributionFunction createDistributionFunction(
         double r_a   = kvmap.getDoubleAlt("anisotropyRadius", "r_a", INFINITY) * converter.lengthUnit;
         return PtrDistributionFunction(new QuasiSphericalCOM(
             potential::DensityWrapper(*density), potential::PotentialWrapper(*potential), beta0, r_a));
+    }
+    else  if(utils::stringsEqual(type, "Plummer")) {
+	    checkNonzero(potential, type);
+	    potential::Interpolator pot_interp(*potential);
+	    return PtrDistributionFunction(new PlummerDF(parsePlummerParam(kvmap, converter)));
+    }
+    else  if(utils::stringsEqual(type, "Isochrone")) {
+	    checkNonzero(potential, type);
+	    potential::Interpolator pot_interp(*potential);
+	    return PtrDistributionFunction(new IsochroneDF(parseIsochroneParam(kvmap, converter)));
     }
     else if(utils::stringsEqual(type, "Oxford")) {
 	    checkNonzero(potential, type);

@@ -235,9 +235,21 @@ inline EXP std::vector<std::pair<coord::PosVelT<CoordT>, double> > integrateTraj
     if(output[output.size()-1].second-output[0].second<.99*totalTime) output.resize(output.size()-1);//trim excess member
     return output;
 }
+/*
+ * Do (r,vR) SoS integrating in the meridional plane
+ * Returns terminating phase-space point */
+EXP coord::PosVelCyl makeSoS(const coord::PosVelCyl&, const potential::BasePotential&,
+			     std::vector<double>&, std::vector<double>&, int, const double z0=0);
 
-EXP void makeSoS(const coord::PosVelCyl&, const potential::BasePotential&,
-		    std::vector<double>&, std::vector<double>&, int&);
+/* As above but also give consequents in (theta,p_theta) plane */
+EXP coord::PosVelCyl makeSoS(const coord::PosVelCyl&, const potential::BasePotential&,
+			    std::vector<double>&, std::vector<double>&, const double,
+			    std::vector<double>&, std::vector<double>&, int, const double z0=0);
+
+/*
+ *Do SoS in (X,pX) plane for orbit with Lz=0 */
+EXP coord::PosVelCyl makeSoSXz(const coord::PosVelCyl&, const potential::BasePotential&,
+			     std::vector<double>&, std::vector<double>&, int);
 
 
 }  // namespace

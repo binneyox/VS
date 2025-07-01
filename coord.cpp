@@ -1,5 +1,4 @@
 #include "coord.h"
-#include <cassert>
 #include <stdexcept>
 
 
@@ -111,6 +110,9 @@ EXP PosCyl toPos(const PosSphMod& p) {
 	double rt = sintheta<1? sqrt(1-pow_2(sintheta)) : 0;
 	double costheta = p.tau*(1+sintheta);
 	return PosCyl(p.r*sintheta,p.r*costheta,p.phi);*/
+}
+EXP UVSph interpUVSph(const double x, const UVSph& C0, const UVSph& C1){
+	return UVSph(x*C0.Delta+(1-x)*C1.Delta);
 }
 template<>
 EXP PosCyl toPos(const PosUVSph& p) {
@@ -424,7 +426,7 @@ EXP PosCyl toPosDeriv(const PosUVSph& p, PosDerivT<UVSph, Cyl>* deriv, PosDeriv2
 	}
 	return PosCyl(R, z, p.phi);
 }
-
+/*
 template<>
 EXP PosUVSph toPosDeriv(const PosCyl& from, const UVSph& cs,
 			PosDerivT<Cyl, UVSph>* deriv, PosDeriv2T<Cyl, UVSph>* deriv2)
@@ -436,6 +438,30 @@ EXP PosUVSph toPosDeriv(const PosCyl& from, const UVSph& cs,
 	double chu2 = 1+shu2, chu=sqrt(chu2), ch2u=chu2+shu2;
 	double cosv = from.z/(cs.Delta*chu);
 	double sinv = from.R/(cs.Delta*shu), cos2v = pow_2(cosv) - pow_2(sinv);;
+	double u = asinh(shu);
+	double v = acos(cosv);
+	if(deriv!=NULL){
+		deriv->dudR = cs.Delta * chu * sinv / (cs.Delta2 * ch2u - R2 - z2);
+		deriv->dudz = cs.Delta * shu * cosv / (cs.Delta2 * ch2u - R2 - z2);
+		deriv->dvdR = cs.Delta * shu * cosv / (R2+z2-cs.Delta2*cos2v);
+		deriv->dvdz =-cs.Delta * chu * sinv / (R2+z2-cs.Delta2*cos2v);
+	}
+	if(deriv2!=NULL) {
+		//Missing code
+	}
+	return PosUVSph(u, v, from.phi, cs);
+}*/
+template<>
+EXP PosUVSph toPosDeriv(const PosCyl& from, const UVSph& cs,
+			PosDerivT<Cyl, UVSph>* deriv, PosDeriv2T<Cyl, UVSph>* deriv2)
+{
+	double R2 = pow_2(from.R), z2 = pow_2(from.z);
+	double R2_z2 = (R2+z2)/cs.Delta2;
+	double shu2 = .5*(R2_z2-1 + sqrt(pow_2(1-R2_z2)+4*R2/cs.Delta2));
+	double shu = sqrt(shu2);
+	double chu2 = 1+shu2, chu=sqrt(chu2), ch2u=chu2+shu2;
+	double cosv = from.z/(cs.Delta*chu), cosv2=cosv*cosv;
+	double sinv = sqrt(1-cosv2), cos2v = cosv2 - pow_2(sinv);;
 	double u = asinh(shu);
 	double v = acos(cosv);
 	if(deriv!=NULL){
@@ -599,12 +625,22 @@ EXP PosVelCyl toPosVel(const PosVelCar& p) {
 
 template<>
 EXP PosVelCyl toPosVel(const PosVelSph& p) {
-    double sintheta, costheta;
-    math::sincos(p.theta, sintheta, costheta);
-    const double R=p.r*sintheta, z=p.r*costheta;
-    const double vR=p.vr*sintheta+p.vtheta*costheta;
-    const double vz=p.vr*costheta-p.vtheta*sintheta;
-    return PosVelCyl(R, z, p.phi, vR, vz, p.vphi);
+	double sintheta, costheta;
+	math::sincos(p.theta, sintheta, costheta);
+	const double R=p.r*sintheta, z=p.r*costheta;
+	const double vR=p.vr*sintheta+p.vtheta*costheta;
+	const double vz=p.vr*costheta-p.vtheta*sintheta;
+	return PosVelCyl(R, z, p.phi, vR, vz, p.vphi);
+}
+
+template<>
+EXP PosVelCyl toPosVel(const PosMomSph& p) {
+	double sintheta, costheta;
+	math::sincos(p.theta, sintheta, costheta);
+	const double R=p.r*sintheta, z=p.r*costheta;
+	const double vR=p.pr*sintheta+p.ptheta/p.r*costheta;
+	const double vz=p.pr*costheta-p.ptheta/p.r*sintheta;
+	return PosVelCyl(R, z, p.phi, vR, vz, p.pphi/(p.r*sintheta));
 }
 
 template<>
@@ -612,9 +648,9 @@ EXP PosMomSph toPosMom(const PosMomCyl& p) {
 	PosDerivT<Sph, Cyl> derivs;	
 	const PosSph rtheta(toPosDerivR<Cyl, Sph> (p, &derivs));
 	return PosMomSph(rtheta, MomSph(
-				    derivs.dRdr * p.pR + derivs.dzdr * p.pz,
-				    derivs.dRdtheta * p.pR + derivs.dzdtheta * p.pz,
-				    p.pphi));
+					derivs.dRdr * p.pR + derivs.dzdr * p.pz,
+					derivs.dRdtheta * p.pR + derivs.dzdtheta * p.pz,
+					p.pphi));
 }
 
 template<>
@@ -732,25 +768,16 @@ EXP PosMomCyl toPosMom(const PosMomProlMod& p) {
 }
 
 template<>
-EXP PosMomCar toPosMom(const PosVelCar& p) {
-	return PosMomCar(p.x, p.y, p.z, p.vx, p.vy, p.vz);
-}
-
-template<>
-EXP PosMomCyl toPosMom(const PosVelCyl& p) {
-	return PosMomCyl(p.R, p.z, p.phi, p.vR, p.vz, p.vphi*p.R);
-}
-
-template<>
-EXP PosMomSph toPosMom(const PosVelSph& p) {
-	return PosMomSph(p.r, p.theta, p.phi, p.vr, p.vtheta*p.r, p.vphi*p.r*sin(p.theta));
-}
-
-template<>
 EXP PosMomCar toPosMom(const PosMomCyl& p) {
-	double csp=cos(p.phi), snp=sin(p.phi), vphi=p.phi/p.R;
-	return PosMomCar(p.R*csp, p.R*snp,p.z,
+	double csp=cos(p.phi), snp=sin(p.phi), vphi=p.pphi/p.R;
+	return PosMomCar(p.R*csp, p.R*snp, p.z,
 			 p.pR*csp-vphi*snp,p.pR*snp+vphi*csp,p.pz);
+}
+
+template<>
+EXP PosMomCar toPosMom(const PosMomSph& p) {
+	PosMomCyl pC = toPosMom<Sph,Cyl>(p);
+	return toPosMom<Cyl, Car>(pC);
 }
 
 template<>
@@ -777,6 +804,25 @@ EXP PosVelCyl toPosVel(const PosVelUVSph& from) {
 template<>
 EXP PosVelCyl toPosVel(const PosMomCyl& p) {
 	return PosVelCyl(p.R,p.z,p.phi,p.pR,p.pz,p.pphi/p.R);
+}
+/** trivial conversions */
+template<> inline PosMomCar toPosMom<Car,Car>(const PosMomCar& p) { return p;}
+template<> inline PosMomCyl toPosMom<Cyl,Cyl>(const PosMomCyl& p) { return p;}
+template<> inline PosMomSph toPosMom<Sph,Sph>(const PosMomSph& p) { return p;}
+/* Vel to Mom conversions */
+template<>
+EXP PosMomCar toPosMom(const PosVelCar& p) {
+	return PosMomCar(p.x, p.y, p.z, p.vx, p.vy, p.vz);
+}
+
+template<>
+EXP PosMomCyl toPosMom(const PosVelCyl& p) {
+	return PosMomCyl(p.R, p.z, p.phi, p.vR, p.vz, p.vphi*p.R);
+}
+
+template<>
+EXP PosMomSph toPosMom(const PosVelSph& p) {
+	return PosMomSph(p.r, p.theta, p.phi, p.vr, p.vtheta*p.r, p.vphi*p.r*sin(p.theta));
 }
 
 
@@ -1161,19 +1207,40 @@ EXP void evalAndConvertSph(const math::IFunction& F,
 
 EXP void makeRotationMatrix(double alpha, double beta, double gamma, double mat[9])
 {
-    double sa, ca, sb, cb, sc, cc;
-    math::sincos(alpha, sa, ca);
-    math::sincos(beta,  sb, cb);
-    math::sincos(gamma, sc, cc);
-    mat[0] =  ca * cc - sa * cb * sc;
-    mat[1] =  sa * cc + ca * cb * sc;
-    mat[2] =  sb * sc;
-    mat[3] = -ca * sc - sa * cb * cc;
-    mat[4] = -sa * sc + ca * cb * cc;
-    mat[5] =  sb * cc;
-    mat[6] =  sa * sb;
-    mat[7] = -ca * sb;
-    mat[8] =  cb;
+	double sa, ca, sb, cb, sc, cc;
+	math::sincos(alpha, sa, ca);
+	math::sincos(beta,  sb, cb);
+	math::sincos(gamma, sc, cc);
+	mat[0] =  ca * cc - sa * cb * sc;
+	mat[1] =  sa * cc + ca * cb * sc;
+	mat[2] =  sb * sc;
+	mat[3] = -ca * sc - sa * cb * cc;
+	mat[4] = -sa * sc + ca * cb * cc;
+	mat[5] =  sb * cc;
+	mat[6] =  sa * sb;
+	mat[7] = -ca * sb;
+	mat[8] =  cb;
+}
+
+EXP std::vector<double> makeRotationMatrix(double alpha, double beta, double gamma)
+{
+	std::vector<double> mat(9);
+	double sa, ca, sb, cb, sc, cc;
+	math::sincos(alpha, sa, ca);
+	math::sincos(beta,  sb, cb);
+	math::sincos(gamma, sc, cc);
+	mat[0] =  ca*cc-sc*sb*sa;
+	mat[1] = -sa*cc-sc*cb*ca;
+	mat[2] =  sc*sb;
+	mat[3] =  ca*sc+cc*cb*sa;
+	mat[4] = -sa*sc+cc*cb*ca;
+	mat[5] = -sb*cc;
+	mat[6] =  sa*sb;
+	mat[7] =  sb*ca;
+	mat[8] =  cb;
+//	printf("%f\t%f\t%f\n%f\t%f\t%f\n%f\t%f\t%f\n",mat[0],mat[1],mat[2],
+//	       mat[3],mat[4],mat[5],mat[6],mat[7],mat[8]);
+	return mat;
 }
 
 }  // namespace coord

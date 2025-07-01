@@ -87,8 +87,8 @@ EXP void computeMoments(
     const bool separate=false,
     const double reqRelError=1e-3,
     const int maxNumEval=1e5,
-	const double bright = NULL,
-	const double faint = NULL, 
+	const double bright = 0.0,
+	const double faint = 0.0, 
 	obs::solarShifter* sun=NULL);
 
 /* Compute moments along a LOS rather than at a point. Have option to specify bright and faint
@@ -107,8 +107,8 @@ EXP void computeMomentsLOS(
 			   const bool separate=false,
 			   const double reqRelError=1e-3,
 			   const int maxNumEval=1e5,
-			   const double bright = NULL,
-			   const double faint = NULL);
+			   const double bright = 0.0,
+			   const double faint = 0.0);
 
 
 /** Compute the projected moments of distribution function:
@@ -314,7 +314,7 @@ EXP particles::ParticleArray<coord::PosCyl> sampleDensity(
 EXP std::vector<coord::VelCyl> sampleVelocity(
 					      const GalaxyModel&, const coord::PosCyl, const size_t,
 					      obs::BaseLos* Los = NULL,
-					      const double bright = NULL,const double faint = NULL
+					      const double bright = 0.0,const double faint = 0.0
 					      );
 
 /** Sample half velocity space (Vphi>0) at a given location
@@ -325,7 +325,7 @@ EXP std::vector<coord::VelCyl> sampleVelocity(
 */
 EXP std::vector<coord::VelCyl> sampleHalfVelocity(
 					      const GalaxyModel&, const coord::PosCyl, const size_t,
-					      obs::BaseLos* Los = NULL, const double bright = NULL,const double faint = NULL
+					      obs::BaseLos* Los = NULL, const double bright = 0.0,const double faint = 0.0
 					      );
 
 /** As sampleVelocity but also returns an apparent magnitude for each star
@@ -351,17 +351,25 @@ EXP std::vector<coord::VelCylMag> sampleVelocityLF(
 */
 EXP std::vector<coord::PosVelCyl> sampleLOS(
 					    const GalaxyModel&, const obs::BaseLos*, const size_t,
-					    const double bright = NULL, const double faint = NULL);
+					    const double bright = 0.0, const double faint = 0.0);
 
+/*
+ Sample stars along LOS as above but return only (s,Vlos)
+*/
 EXP std::vector<std::pair<double,double> > sampleLOSsVlos(
 					    const GalaxyModel&, const obs::BaseLos*, const size_t,
-					    const double bright = NULL, const double faint = NULL);
+					    const double bright = 0.0, const double faint = 0.0);
 
-/* As above but also supplies apparent magnitude for each star
+/*
+ Sample LOS returning (x,v,mag) with mag apparent magnitude for each star
  */
 EXP std::vector<coord::PosVelCylMag> sampleLOS_LF(
 	const GalaxyModel&, const obs::BaseLos*, const size_t,
 	const double bright, const double faint);
+/*
+ Same job as above but executed in 2 steps: first choose (x,v) then a
+ magnitude
+*/
 EXP std::vector<coord::PosVelCylMag> sampleLOSLF(
 	const GalaxyModel&, const obs::BaseLos*, const size_t,
 	const double bright, const double faint);
@@ -391,7 +399,7 @@ private:
     virtual double densityCyl(const coord::PosCyl &point) const {
         double result;
 	computeMoments(model, point, &result, NULL, NULL, NULL, NULL, NULL, NULL,
-		       false, relError, maxNumEval, NULL, NULL, NULL);
+		       false, relError, maxNumEval, 0.0, 0.0, NULL);
         return result;
     }
 };

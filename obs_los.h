@@ -12,13 +12,13 @@ class EXP BaseLos{
 		math::CubicSpline extinct;
 		dust::BaseDustModel* dm;
 	public:
-		double from_Kpc, s0;
 		bool semi_inf;
-		BaseLos(){};
+		const double s0, from_Kpc;
+		//BaseLos(){};
 		virtual ~BaseLos(){};
-		BaseLos(const double _fromKpc, const bool _semi_inf, const double _s0,
+		BaseLos(const bool _semi_inf, const double _s0, const double _from_Kpc,
 			  dust::BaseDustModel* _dm=NULL):
-		    from_Kpc(_fromKpc), semi_inf(_semi_inf), s0(_s0), dm(_dm) {
+		    semi_inf(_semi_inf), s0(_s0), from_Kpc(_from_Kpc), dm(_dm) {
 		}
 		virtual coord::PosCyl deepest() const{
 			printf("Erroneous call to deepest()");
@@ -29,25 +29,20 @@ class EXP BaseLos{
 			return coord::PosCar(0,0,0);
 		}
 		coord::PosCyl Rzphi(const double s) const{// s in internal units
-			coord::PosCyl Cyl(coord::toPosCyl(xyz(s)));			
-			return Cyl;
+			return coord::PosCyl(coord::toPosCyl(xyz(s)));			
 		}
 		virtual double s(const coord::PosCar& xyz) const{// s in internal units
 			printf("Error: s call in BaseLos\n");
 			return 0;
 		}
-		double s(const coord::PosCyl& p) const{
-			return s(coord::toPosCar(p));
-		}
-		double sKpc(const coord::PosCar& xyz) const{// s in Kpc
-			return s(xyz)/from_Kpc;
-		}
-		double sKpc(const coord::PosCyl& p) const{
-			return sKpc(coord::toPosCar(p));
+		double s(const coord::PosCyl& Rz) const{
+			return s(coord::toPosCar(Rz));
 		}
 		virtual std::pair<double,double> sVlos(const coord::PosVelCyl& xv) const{// s Vlos int units
 			return std::make_pair(0,0);
 		}
+		virtual double sMod_H(const coord::PosVelCyl) const=0;//m-M including A
+		virtual double reduc_H(const coord::PosVelCyl) const=0;//m-M from A only
 		double A_V(const double sKpc) const{
 			if(!dm) return 0;
 			else{
@@ -82,27 +77,46 @@ class EXP BaseLos{
  */
 class EXP extLos: public obs::BaseLos {
 	public: 
-		const double xs, ys, incl, cosi, sini;
-		extLos(double _xs, double _ys, double _incl, double s0,
-		       double _fromKpc, dust::BaseDustModel* _dm=NULL);
-		virtual coord::PosCyl deepest() const;// Point of closest approach to GC
-		virtual coord::PosCar xyz(const double s) const{// s in internal units
-			double x = xs;//s is measured from crossing of xz plane
+		units::InternalUnits intUnits;
+		const double xs, ys, incl, cosi, sini;//xs ys in intUnits
+		extLos(units::InternalUnits _intUnits,
+		       double _xs, double _ys, double _incl, double s0,
+		       dust::BaseDustModel* _dm=NULL);
+		virtual coord::PosCyl deepest() const{// Point of closest approach to GC
+			return Rzphi(-ys*cosi/sini);
+		}
+		// s in internal units is measured from crossing of xz plane
+		virtual coord::PosCar xyz(const double s) const{
+			double x = xs;
 			double y = s*sini;
-			double z = ys/sini+s*cosi;
+			double z = s*cosi - ys/sini;
 			return coord::PosCar(x, y, z);
 		}
-		virtual double s(const coord::PosCar& _xyz) const{// s in internal units
-			double s = pow_2(_xyz.y) + pow_2(_xyz.z-ys/sini);
+		// s in intUnits is measured from crossing of xz plane
+		virtual double s(const coord::PosCar& _p) const{
+			if(_p.x!=xs || fabs(_p.y-(_p.z*sini - ys)/cosi)>.0001)
+				printf("Error p not on LOS in extLos.s\n"); 
+			double s = pow_2(_p.y) + pow_2(_p.z-ys/sini);
 			s = s>0?  sqrt(s) : 0;
-			return _xyz.y>0? s : -s;
+			return _p.y>0? s : -s;
+		}
+		virtual double s(const coord::PosCyl& p) const{
+			return s(coord::toPosCar(p));
 		}
 		virtual std::pair<double,double> sVlos(const coord::PosVelCyl& p) const{
 			coord::PosVelCar xv(coord::toPosVelCar(p));
-			return std::make_pair(s(xv), xv.vy*sini + xv.vz*cosi);
+			return std::make_pair(s(xv), (xv.vy*sini + xv.vz*cosi));
 		}
-		virtual double start() const{//starting s (Kpc) value for Av integration 
-			return fabs(sini)>0? (1-ys/from_Kpc/sini)/cosi : -30;
+		virtual double start() const{//starting s (intUnits) value for Av integration 
+			return sini*cosi!=0? 2*ys/(sini*cosi) : -10*fmax(xs,ys);
+//			fabs(sini)>0? (1-ys/intUnits.from_Kpc/sini)/cosi : -30;
+		}
+		virtual double sMod_H(const coord::PosVelCyl pv) const{
+			double s1 = s(pv);
+			return 5*log10(100*(s0+s1)*intUnits.to_Kpc) + A_H(s1);
+		}
+		virtual double reduc_H(const coord::PosVelCyl pv) const{
+			return pow(10,-0.4*A_H(s(pv)));
 		}
 };
 
@@ -111,24 +125,49 @@ class EXP extLos: public obs::BaseLos {
 //otherwise zero extinction
 class EXP SunLos: public obs::BaseLos {
 	public: 
-		const obs::solarShifter sun;
-		PosSky pos;// l, b in radians
+		PosSky pos;// l, b in degrees
 		double cosl, cosb, sinl, sinb;
-		SunLos(const PosSky _pos, const obs::solarShifter _sun,
-		    dust::dustModel* _dm=NULL);//angles in radians
+		const obs::solarShifter sun;
+		SunLos(
+		       const PosSky _pos, const obs::solarShifter _sun,
+		       dust::dustModel* _dm=NULL);
+		SunLos(const double l,const double b, const obs::solarShifter _sun,
+		       dust::dustModel* _dm=NULL);
 		SunLos(const coord::PosCar xyz, const obs::solarShifter _sun,
-		    dust::dustModel* _dm=NULL);
-		virtual coord::PosCyl deepest() const;// Point of closest approach to GC
-		virtual coord::PosCar xyz(const double s) const{// s in internal units
+		       dust::dustModel* _dm=NULL);
+		// Point of closest approach to GC
+		virtual coord::PosCyl deepest() const;
+		// s in internal units
+		virtual coord::PosCar xyz(const double s) const{
 			double x = sun.xyz().x + s*cosb*cosl;
 			double y = sun.xyz().y + s*cosb*sinl;
 			double z = sun.xyz().z + s*sinb;
 			coord::PosCar Car(x, y, z);
 			return Car;
 		}
-		virtual double s(const coord::PosCar& xyz) const{// s in internal units
-			double s = pow_2(xyz.x-sun.xyz().x) + pow_2(xyz.y-sun.xyz().y) + pow_2(xyz.z-sun.xyz().z);
-			return (s>0?  sqrt(s) : 0);
+		// s in internal units (this isn't to do with a los)
+		virtual double s(const coord::PosCar& p) const{
+			double dx = p.x-sun.xyz().x, dy = p.y-sun.xyz().y;
+			double dR2 = dx*dx+dy*dy, dz = p.z-sun.xyz().z;
+			double s2 = dR2+dz*dz;
+			double s= s2>0? sqrt(s2) : 0;
+			if(fabs(pos.l*sun.torad - atan2(dy,dx))>1e-5 ||
+			   fabs(dz-s*sinb)>1e-5)
+				printf("Error p not on LOS in sun.s()");
+			return s;
+		}
+		virtual std::pair<double,double> sVlos(const coord::PosVelCyl& p) const{
+			coord::PosVelCar xv(coord::toPosVelCar(p));
+			double Vlos=(xv.x*cosl+xv.y*sinl)*cosb+xv.z*sinb;
+			return std::make_pair(s(xv), Vlos);
+		}
+		virtual double sMod_H(const coord::PosVelCyl pv) const{
+			double s1=s(coord::toPosCar(pv));
+			return 5*log10(100*s1/sun.from_Kpc) + A_H(s1/sun.from_Kpc);
+		}
+		virtual double reduc_H(const coord::PosVelCyl pv) const{
+			double s1=s(coord::toPosCar(pv));
+			return pow(10,-0.4*A_H(s1/sun.from_Kpc));
 		}
 		virtual double start() const{
 			return 0;

@@ -191,6 +191,7 @@ EXP std::vector<int> getIndicesAzimuthal(int mmax, coord::SymmetryType sym);
     output_coefs[mmax+m] = C_m,    0 <= m <= mmax  (cosine terms).
     If useSine is false, then the output contains only cosine terms:
     output_coefs[m] = C_m,  0 <= m <= mmax.
+    input cos(phi)+.5*sin(phi) yields ....0.5 0 1.0 ....
 */
 class EXP FourierTransformForward {
 public:

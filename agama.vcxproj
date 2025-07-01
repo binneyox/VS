@@ -155,6 +155,7 @@
     <ClCompile Include="cubature.cpp" />
     <ClCompile Include="df_base.cpp" />
     <ClCompile Include="df_disk.cpp" />
+    <ClCompile Include="df_ergodic.cpp" />
     <ClCompile Include="df_factory.cpp" />
     <ClCompile Include="df_halo_new.cpp" />
     <ClCompile Include="df_interpolated.cpp" />
@@ -175,7 +176,9 @@
     <ClCompile Include="math_fourier.cpp" />
     <ClCompile Include="math_gausshermite.cpp" />
     <ClCompile Include="math_geometry.cpp" />
-    <ClCompile Include="math_linalg.cpp" />
+    <ClCompile Include="math_linalg.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="math_ode.cpp" />
     <ClCompile Include="math_optimization.cpp" />
     <ClCompile Include="math_random.cpp" />
@@ -205,13 +208,6 @@
     <ClCompile Include="potential_perfect_ellipsoid.cpp" />
     <ClCompile Include="potential_spheroid.cpp" />
     <ClCompile Include="potential_utils.cpp" />
-    <ClCompile Include="torus\chb.cpp" />
-    <ClCompile Include="torus\orb.cpp" />
-    <ClCompile Include="torus\pjmcoords.cpp" />
-    <ClCompile Include="torus\pjmnum.cpp" />
-    <ClCompile Include="torus\point_closedorbitcheby.cpp" />
-    <ClCompile Include="torus\point_none.cpp" />
-    <ClCompile Include="torus\wd_numerics.cpp" />
     <ClCompile Include="utils.cpp" />
     <ClCompile Include="utils_config.cpp" />
   </ItemGroup>
@@ -229,6 +225,7 @@
     <ClInclude Include="debug_utils.h" />
     <ClInclude Include="df_base.h" />
     <ClInclude Include="df_disk.h" />
+    <ClInclude Include="df_ergodic.h" />
     <ClInclude Include="df_factory.h" />
     <ClInclude Include="df_halo.h" />
     <ClInclude Include="df_interpolated.h" />
@@ -280,7 +277,6 @@
     <ClInclude Include="potential_perfect_ellipsoid.h" />
     <ClInclude Include="potential_spheroid.h" />
     <ClInclude Include="potential_utils.h" />
-    <ClInclude Include="torus\toy_isochrone.h" />
     <ClInclude Include="units.h" />
     <ClInclude Include="utils.h" />
     <ClInclude Include="utils_config.h" />

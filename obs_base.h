@@ -35,8 +35,9 @@ struct PosVelSky{
 	bool is_ra;
 	PosSky pos;
 	VelSky pm;
-	PosVelSky(PosSky _pos, VelSky _pm) : pos(_pos), pm(_pm){}
-	PosVelSky(double l, double b, double mul, double mub, bool is_ra = false) : pos(l,b,is_ra), pm(mul,mub,is_ra){}
+	PosVelSky(PosSky _pos, VelSky _pm) : pos(_pos), pm(_pm), is_ra(_pos.is_ra && _pm.is_ra) {}
+	PosVelSky(double l, double b, double mul, double mub, bool _is_ra = false) :
+	    pos(l,b,_is_ra), pm(mul,mub,_is_ra), is_ra(_is_ra) {}
 };
 
 /* Transformations between equatorial & Galactic coords (units degreea)
@@ -46,13 +47,20 @@ EXP PosSky from_RAdec(PosSky p);
 EXP PosSky to_RAdec(double l,double b);
 EXP PosSky to_RAdec(PosSky p);
 //PMs are mura=ra dot cos(delta) and mul=l dot cos(b)
+EXP PosVelSky from_RAdec(double ra,double dec,double mura,double mudec);
+EXP PosVelSky from_RAdec(PosSky radec,VelSky pmradec);
+EXP PosVelSky from_RAdec(PosVelSky p);//p in ra dec of course
+EXP PosVelSky to_RAdec(double l,double b,double mul,double mub);
+EXP PosVelSky to_RAdec(PosSky lb,VelSky pm);
+EXP PosVelSky to_RAdec(PosVelSky pv);
+/*
 EXP PosVelSky from_muRAdec(double ra,double dec,double mura,double mudec);
 EXP PosVelSky from_muRAdec(PosSky radec,VelSky pmradec);
 EXP PosVelSky from_muRAdec(PosVelSky p);//p in ra dec of course
 EXP PosVelSky to_muRAdec(double l,double b,double mul,double mub);
 EXP PosVelSky to_muRAdec(PosSky lb,VelSky pm);
 EXP PosVelSky to_muRAdec(PosVelSky pv);
-
+*/
 /* Class to convert obs coords (l,b in deg, mu in mas/yr, s in kpc,
  * Vlos in km/s) into 6d Galactocentric phase space coords in int units
  * and back. Sun's Galactocentric phase-space coords (if specified) should be in Kpc &
@@ -62,12 +70,15 @@ class EXP solarShifter{
 	private:
 		coord::PosVelCar Sun;
 	public:
-		double from_mas_per_yr, torad, from_Kpc, from_kms;
+		const double from_mas_per_yr, torad, from_Kpc, from_kms;
 		solarShifter(const units::InternalUnits& intUnits, coord::PosVelCar* _Sun=NULL);
 		// l, b in degrees, s in kpc, VelSky in mas/yr, Vlos in kms
 		coord::PosCar toCar(PosSky pos, double sKpc) const;
 		coord::PosVelCar toCar(const PosSky p,double sKpc,const VelSky pm,double Vlos_kms) const;
 		coord::PosVelCyl toCyl(const PosSky p,double sKpc,const VelSky pm,double Vlos_kms) const;
+		coord::PosVelCyl toCyl(const PosVelSky pv,double sKpc,double Vlos_kms) const{
+			return toCyl(pv.pos,sKpc,pv.pm,Vlos_kms);
+		}
 		PosSky toSky(const coord::PosCar p, double& sKpc) const;
 		PosSky toSky(const coord::PosCyl p, double& sKpc) const{
 			return toSky(coord::toPosCar(p), sKpc);
@@ -76,6 +87,10 @@ class EXP solarShifter{
 		PosVelSky toSky(const coord::PosVelCyl pv, double& sKpc, double& Vlos_kms) const{
 			return toSky(coord::toPosVelCar(pv), sKpc, Vlos_kms);
 		}
+		//Vlos of star with Vgsr=0
+		double Vreflex(PosSky) const;//cpt (kms) of sun's v towards star
+		//Proper motion of star with Vgsr=0
+		VelSky Vreflex(PosSky p,double sKpc, double& Vlos) const;
 		VelSky toPM(const coord::PosVelCar p, double& Vlos_kms) const;
 		VelSky toPM(const coord::PosVelCyl p, double& Vlos_kms) const{
 			return toPM(coord::PosVelCar(coord::toPosVelCar(p)), Vlos_kms);

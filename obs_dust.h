@@ -14,8 +14,8 @@ namespace dust {
 
 class EXP BaseDustModel{
 	private:
-		const double Rd, zd, rho0, Rw, Hw;
 		potential::PtrDensity ptr;
+		const double Rd, zd, rho0, Rw, Hw;
 		double Zw(const coord::PosCyl& p) const{
 			if(p.R<Rw) return 0;
 			else return Hw*(p.R-Rw)/Rw*sin(p.phi);
@@ -86,7 +86,6 @@ class EXP Blob{
 
 class EXP dustModel: public BaseDustModel {
 	private:
-		obs::solarShifter* shifter;
 		potential::PtrDensity ptr;
 		std::vector<JTcloud>* cl;
 		std::vector<Spiral>* sp;
@@ -96,15 +95,15 @@ class EXP dustModel: public BaseDustModel {
 			  const double _Rw, const double _Hw,
 			  obs::solarShifter* _shifter):
 		    BaseDustModel(_Rd,_zd,dAvds/_shifter->from_Kpc/dens(coord::toPosCyl(_shifter->xyz())),
-		    _Rw, _Hw, _shifter->from_Kpc),
-		    shifter(_shifter){
+		    _Rw, _Hw, _shifter->from_Kpc){
 			ptr = NULL; sp = NULL; cl = NULL;
 		}
 		dustModel(potential::PtrDensity _ptr, const double dAvds,
 			  obs::solarShifter* _shifter):
-		    ptr(_ptr), shifter(_shifter),
-		    BaseDustModel(_ptr, dAvds/_shifter->from_Kpc/ptr->density(coord::toPosCyl(_shifter->xyz())),
-		    _shifter->from_Kpc)
+		    ptr(_ptr),
+		    BaseDustModel(_ptr,
+				  dAvds/_shifter->from_Kpc/_ptr->density(coord::toPosCyl(_shifter->xyz())),
+				  _shifter->from_Kpc)
  {
 			bl = NULL; sp = NULL; cl = NULL;
 		}

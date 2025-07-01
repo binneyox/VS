@@ -90,7 +90,7 @@ protected:
 
     /** Evaluate density at the position specified in spherical coordinates */
     virtual double densitySph(const coord::PosSph &pos) const = 0;
-};  // class BaseDensity
+};// class BaseDensity
 
 ///@}
 /// \name   Base class for all potentials
@@ -334,19 +334,38 @@ public:
     it evaluates the potential and its derivatives at the given point along x-axis
 */
 class EXP PotentialWrapper: public math::IFunction {
-    const BasePotential& potential;
-public:
-    virtual void evalDeriv(const double R, double *val=NULL, double *der=NULL, double *der2=NULL) const {
-        coord::GradCyl grad;
-        coord::HessCyl hess;
-        potential.eval(coord::PosCyl(R,0,0), val, der? &grad : 0, der2? &hess : 0);
-        if(der)
-            *der = grad.dR;
-        if(der2)
-            *der2 = hess.dR2;
-    }
-    virtual unsigned int numDerivs() const { return 2; }
-    explicit PotentialWrapper(const BasePotential &p) : potential(p) {};
+	const BasePotential& potential;
+	public:
+		virtual void evalDeriv(const double R, double *val=NULL, double *der=NULL, double *der2=NULL) const {
+			coord::GradCyl grad;
+			coord::HessCyl hess;
+			potential.eval(coord::PosCyl(R,0,0), val, der? &grad : 0, der2? &hess : 0);
+			if(der)
+				*der = grad.dR;
+			if(der2)
+				*der2 = hess.dR2;
+		}
+		virtual unsigned int numDerivs() const { return 2; }
+		explicit PotentialWrapper(const BasePotential &p) : potential(p) {};
+};
+/** A wrapper class providing a IFunction interface to a potential:
+    it evaluates the potential and its derivatives at the given point
+    along z-axis
+*/
+class EXP PotentialWrapperZ: public math::IFunction {
+	const BasePotential& potential;
+	public:
+		virtual void evalDeriv(const double z, double *val=NULL, double *der=NULL, double *der2=NULL) const {
+			coord::GradCyl grad;
+			coord::HessCyl hess;
+			potential.eval(coord::PosCyl(0,z,0), val, der? &grad : 0, der2? &hess : 0);
+			if(der)
+				*der = grad.dz;
+			if(der2)
+				*der2 = hess.dz2;
+		}
+		virtual unsigned int numDerivs() const { return 2; }
+		explicit PotentialWrapperZ(const BasePotential &p) : potential(p) {};
 };
 
 /** A wrapper class providing a IFunction interface to a spherically-symmetric density,
@@ -374,6 +393,15 @@ inline double totalEnergy(const BasePotential& potential, const coord::PosVelCyl
 
 inline double totalEnergy(const BasePotential& potential, const coord::PosVelSph& p)
 {  return potential.value(p) + 0.5*(pow_2(p.vr)+pow_2(p.vtheta)+pow_2(p.vphi)); }
+
+inline double totalEnergy(const BasePotential& potential, const coord::PosMomCar& p)
+{  return potential.value(p) + 0.5*(p.px*p.px+p.py*p.py+p.pz*p.pz); }
+
+inline double totalEnergy(const BasePotential& potential, const coord::PosMomCyl& p)
+{  return potential.value(p) + 0.5*(pow_2(p.pR)+pow_2(p.pz)+pow_2(p.pphi/p.R)); }
+
+inline double totalEnergy(const BasePotential& potential, const coord::PosMomSph& p)
+{  return potential.value(p) + 0.5*(pow_2(p.pr)+pow_2(p.ptheta/p.r)+pow_2(p.pphi/(p.r*sin(p.theta)))); }
 
 
 // duplication of the symmetry testing functionlets from coord:: namespace

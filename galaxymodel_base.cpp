@@ -6,7 +6,7 @@
 #include "math_spline.h"
 #include "math_linalg.h"
 #include "potential_utils.h"
-#include "actions_torus.h"
+#include "actions_newtorus.h"
 #include "smart.h"
 #include "utils.h"
 #include <cmath>
@@ -170,14 +170,16 @@ class DFIntegrandNdim: public math::IFunctionNdim {
 				    bool valid = true;
 				    if(isFinite(act.Jr + act.Jz + act.Jphi) && (act.Jr!=0 || act.Jz!=0)) {
 					    if(los){
-						    double sKpc = los->s0 + los->sKpc(posvel);
+//						    double s = los->s0 + los->s(posvel);
 						    if(bright){//Compute abs mags
-							    double shift = 5*log10(100 * sKpc);
-							    shift += los->A_H(sKpc);
+							    //double shift = 5*log10(100 * sKpc);
+							    //shift += los->A_H(sKpc);
+							    double shift = los->sMod_H(posvel);
 							    double Bright = bright - shift, Faint = faint - shift;//Now abs mags
 							    model.distrFunc.withSF(act, dfval, Bright, Faint);
 						    } else {//Just reduce star count for extinction
-							    double fac = pow(10,-0.4*los->A_H(sKpc));
+							    //double fac = pow(10,-0.4*los->A_H(sKpc));
+							    double fac = los->reduc_H(posvel);
 							    if(dflen==1) dfval[0]=model.distrFunc.value(act);
 							    else model.distrFunc.eval(act, dfval);
 							    for(int cpt=0; cpt<dflen; cpt++)
@@ -1280,7 +1282,7 @@ EXP void computeProjection(const GalaxyModel& model,
     math::integrateNdim(fnc, xlower, xupper, reqRelError, maxNumEval, result, error);
 }
 
-
+/*
 EXP particles::ParticleArrayCyl sampleActions(
     const GalaxyModel& model, const size_t nSamp, std::vector<actions::Actions>* actsOutput)
 {
@@ -1316,7 +1318,7 @@ EXP particles::ParticleArrayCyl sampleActions(
     }
     return points;
 }
-
+*/
 
 EXP particles::ParticleArrayCyl samplePosVel(
 					     const GalaxyModel& model, const size_t numSamples)

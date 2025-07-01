@@ -12,7 +12,8 @@
 #include <cassert>
 #include <cmath>
 #include <iostream>
-#include "alloca.h"
+//#include "alloca.h"
+#include <stdlib.h>
 
 #if not defined(GSL_MAJOR_VERSION) || (GSL_MAJOR_VERSION == 1) && (GSL_MINOR_VERSION < 15)
 #error "GSL version is too old (need at least 1.15)"
@@ -120,6 +121,15 @@ EXP double pow(double x, double n)
     if(n == 3.0) return x*x*x;
     if(n ==-3.0) return 1/(x*x*x);
     return std::pow(x, n);
+}
+/** return modulus of a complex number */
+EXP double modulus(const std::complex<double>& z){
+	return sqrt(pow_2(z.real())+pow_2(z.imag()));
+}
+
+/** return argument of a complex number in units of PI */
+EXP double arg(const std::complex<double>& z){
+	return atan2(z.imag(),z.real())/M_PI;
 }
 
 EXP double wrapAngle(double x)
@@ -298,7 +308,6 @@ template<> EXP double unscale(const ScalingCos2Inv& scaling, double s, double* d
 
 template<> EXP double scale(const ScalingSin2Inv& scaling, double u){
 	double s = 1/(u-scaling.Delta2);
-	double t = (scaling.sbar-s)/scaling.Ds;
 	return acos((scaling.sbar - s)/scaling.Ds)/M_PI;
 }
 
@@ -1114,7 +1123,7 @@ void integrateNdim(const IFunctionNdim& F, const double xlower[], const double x
     }
 #else
     CubatureParams param(F);
-    int e=hcubature_v(numValues, &integrandNdimWrapperCubature, &param,
+    hcubature_v(numValues, &integrandNdimWrapperCubature, &param,
         numVars, xlower, xupper, maxNumEval, absToler, relToler,
 		      ERROR_INDIVIDUAL, result, error);
     if(numEval!=NULL)
@@ -1166,7 +1175,6 @@ EXP std::vector<line> FrequencyFinder::analyse(double& resid){
 	std::vector<line> lines;
 	pwr0=get_pwr(); pwr_best=1e6;
 	double pwr=pwr0, zmx, zstop;
-	int nlines=0;
 	while(pwr>.001*pwr0 && pwr<pwr_best){
 		pwr_best=pwr;
 		int jmx=difference(zmx);//compute z, the second difference of the spectrum
@@ -1195,7 +1203,7 @@ EXP std::vector<line> FrequencyFinder::analyse(double& resid){
 	return lines;
 }
 double FrequencyFinder::get_pwr(void){//pwr is a measure of the unclaimed portion of the spectrum
-	double pwr=0,Zpwr=0;
+	double Zpwr=0;
 	for(int i=0;i<NF5;i++)
 		Zpwr+=std::norm(Z[i]);
 	return sqrt(Zpwr/(double)(NF5));

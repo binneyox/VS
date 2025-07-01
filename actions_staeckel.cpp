@@ -24,11 +24,11 @@ static const unsigned int INTEGR_ORDER = 10;
     use a higher order for more eccentric orbits, as indicated by the ratio
     of pericenter to apocenter radii (R1/R2) */
 inline unsigned int integrOrder(double R1overR2) {
-    if(R1overR2==0)
-        return math::MAX_GL_ORDER;
-    int log2;  // base-2 logarithm of R1/R2
-    frexp(R1overR2, &log2);
-    return std::min<int>(math::MAX_GL_ORDER, INTEGR_ORDER - log2);
+	if(R1overR2==0)
+		return math::MAX_GL_ORDER;
+	int log2;  // base-2 logarithm of R1/R2
+	frexp(R1overR2, &log2);
+	return std::min<int>(math::MAX_GL_ORDER, INTEGR_ORDER - log2);
 }
 
 /** relative tolerance in determining the range of variables (nu,lambda) to integrate over */
@@ -175,24 +175,24 @@ public:
     together with the coordinates in its prolate spheroidal coordinate system 
 */
 AxisymFunctionFudge findIntegralsOfMotionAxisymFudge(
-    const potential::BasePotential& potential, 
-    const coord::PosVelCyl& point, 
-    const coord::ProlSph& coordsys)
+	const potential::BasePotential& potential, 
+	const coord::PosVelCyl& point, 
+	const coord::ProlSph& coordsys)
 {
-    const coord::PosVelProlSph pprol = coord::toPosVel<coord::Cyl, coord::ProlSph>(point, coordsys);
-    const double
-    Phi  = potential.value(point),
-    Ekin = 0.5 * (pow_2(point.vR) + pow_2(point.vz) + pow_2(point.vphi)),
-    E    = Phi + Ekin,
-    Lz   = coord::Lz(point),
-    Phi0 = potential.value(coord::PosCyl(sqrt(pprol.lambda-coordsys.Delta2), 0, point.phi)),
-    fla  = -pprol.lambda * Phi0,
-    fnu  = fla + Phi * (pprol.lambda - fabs(pprol.nu)),
-    I3   = pprol.lambda * (Phi - Phi0) + 0.5 * (
-        pow_2(point.z * point.vphi) +
-        pow_2(point.R * point.vz - point.z * point.vR) +
-        pow_2(point.vz) * coordsys.Delta2 );
-    return AxisymFunctionFudge(pprol, E, Lz, I3, fla, fnu, potential);
+	const coord::PosVelProlSph pprol = coord::toPosVel<coord::Cyl, coord::ProlSph>(point, coordsys);
+	const double
+			Phi  = potential.value(point),
+	Ekin = 0.5 * (pow_2(point.vR) + pow_2(point.vz) + pow_2(point.vphi)),
+	E    = Phi + Ekin,
+	Lz   = coord::Lz(point),
+	Phi0 = potential.value(coord::PosCyl(sqrt(pprol.lambda-coordsys.Delta2), 0, point.phi)),
+	fla  = -pprol.lambda * Phi0,
+	fnu  = fla + Phi * (pprol.lambda - fabs(pprol.nu)),
+	I3   = pprol.lambda * (Phi - Phi0) + 0.5 * (
+		pow_2(point.z * point.vphi) +
+		pow_2(point.R * point.vz - point.z * point.vR) +
+		pow_2(point.vz) * coordsys.Delta2 );
+	return AxisymFunctionFudge(pprol, E, Lz, I3, fla, fnu, potential);
 }
 
 /** Auxiliary function F analogous to that of Staeckel action finder:
@@ -201,55 +201,55 @@ AxisymFunctionFudge findIntegralsOfMotionAxisymFudge(
     and  delta <= tau < infinity  for the  lambda-component of momentum.
 */
 void AxisymFunctionFudge::evalDeriv(const double tau, 
-    double* val, double* der, double* der2) const
+				    double* val, double* der, double* der2) const
 {
-    assert(tau>=0);
-    double lambda, nu, I, mult;
-    if(tau >= point.coordsys.Delta2) {  // evaluating J_lambda
-        lambda= tau;
-        nu    = fabs(point.nu);
-        mult  = lambda - nu;
-        I     = I3 - fnu;
-    } else {    // evaluating J_nu
-        lambda= point.lambda;
-        nu    = tau;
-        mult  = nu - lambda;
-        I     = I3 - flambda;
-    }
+	assert(tau>=0);
+	double lambda, nu, I, mult;
+	if(tau >= point.coordsys.Delta2) {  // evaluating J_lambda
+		lambda= tau;
+		nu    = fabs(point.nu);
+		mult  = lambda - nu;
+		I     = I3 - fnu;
+	} else {    // evaluating J_nu
+		lambda= point.lambda;
+		nu    = tau;
+		mult  = nu - lambda;
+		I     = I3 - flambda;
+	}
     // compute the potential in coordinates transformed from prol.sph. to cylindrical
-    coord::PosDerivT  <coord::ProlSph, coord::Cyl> coordDeriv;
-    coord::PosDeriv2T <coord::ProlSph, coord::Cyl> coordDeriv2;
-    const coord::PosProlSph posProl(lambda, nu, point.phi, point.coordsys);
-    const coord::PosCyl posCyl = der || der2? 
-        coord::toPosDeriv<coord::ProlSph, coord::Cyl>(posProl, &coordDeriv, der2? &coordDeriv2 : NULL) :
-        coord::toPosCyl(posProl);
-    double Phi;
-    coord::GradCyl gradCyl;
-    coord::HessCyl hessCyl;
-    poten.eval(posCyl, &Phi, der || der2? &gradCyl : NULL, der2? &hessCyl : NULL);
-    const double tauminusdelta = tau - point.coordsys.Delta2;
-    if(val)
-        *val = (tauminusdelta!=0 ? (E * tau- I - Phi * mult) * tauminusdelta : 0) - pow_2(Lz)/2 * tau;
-    if(der || der2) {
-        coord::GradProlSph gradProl = coord::toGrad<coord::Cyl, coord::ProlSph> (gradCyl, coordDeriv);
-        double dPhidtau = (tau >= point.coordsys.Delta2) ? gradProl.dlambda : gradProl.dnu;
-        if(der)
-            *der = E * (tau+tauminusdelta) - pow_2(Lz)/2 - I 
-                 - (mult+tauminusdelta) * Phi - (tauminusdelta!=0 ? tauminusdelta * mult * dPhidtau : 0);
-        if(der2) {
-            double d2Phidtau2 = (tau >= point.coordsys.Delta2) ?
-                // d2Phi/dlambda^2
-                hessCyl.dR2 * pow_2(coordDeriv.dRdlambda) + hessCyl.dz2 * pow_2(coordDeriv.dzdlambda) + 
-                2*hessCyl.dRdz * coordDeriv.dRdlambda*coordDeriv.dzdlambda +
-                gradCyl.dR * coordDeriv2.d2Rdlambda2 + gradCyl.dz * coordDeriv2.d2zdlambda2
-            :   // d2Phi/dnu^2
-                hessCyl.dR2 * pow_2(coordDeriv.dRdnu) + hessCyl.dz2 * pow_2(coordDeriv.dzdnu) + 
-                2*hessCyl.dRdz * coordDeriv.dRdnu*coordDeriv.dzdnu +
-                gradCyl.dR * coordDeriv2.d2Rdnu2 + gradCyl.dz * coordDeriv2.d2zdnu2;
-            *der2 = 2 * (E - Phi - (mult+tauminusdelta) * dPhidtau)
-                  - tauminusdelta * mult * d2Phidtau2;
-        }
-    }
+	coord::PosDerivT  <coord::ProlSph, coord::Cyl> coordDeriv;
+	coord::PosDeriv2T <coord::ProlSph, coord::Cyl> coordDeriv2;
+	const coord::PosProlSph posProl(lambda, nu, point.phi, point.coordsys);
+	const coord::PosCyl posCyl = der || der2? 
+				     coord::toPosDeriv<coord::ProlSph, coord::Cyl>(posProl, &coordDeriv, der2? &coordDeriv2 : NULL) :
+				     coord::toPosCyl(posProl);
+	double Phi;
+	coord::GradCyl gradCyl;
+	coord::HessCyl hessCyl;
+	poten.eval(posCyl, &Phi, der || der2? &gradCyl : NULL, der2? &hessCyl : NULL);
+	const double tauminusdelta = tau - point.coordsys.Delta2;
+	if(val)
+		*val = (tauminusdelta!=0 ? (E * tau- I - Phi * mult) * tauminusdelta : 0) - pow_2(Lz)/2 * tau;
+	if(der || der2) {
+		coord::GradProlSph gradProl = coord::toGrad<coord::Cyl, coord::ProlSph> (gradCyl, coordDeriv);
+		double dPhidtau = (tau >= point.coordsys.Delta2) ? gradProl.dlambda : gradProl.dnu;
+		if(der)
+			*der = E * (tau+tauminusdelta) - pow_2(Lz)/2 - I 
+			       - (mult+tauminusdelta) * Phi - (tauminusdelta!=0 ? tauminusdelta * mult * dPhidtau : 0);
+		if(der2) {
+			double d2Phidtau2 = (tau >= point.coordsys.Delta2) ?
+		// d2Phi/dlambda^2
+					    hessCyl.dR2 * pow_2(coordDeriv.dRdlambda) + hessCyl.dz2 * pow_2(coordDeriv.dzdlambda) + 
+					    2*hessCyl.dRdz * coordDeriv.dRdlambda*coordDeriv.dzdlambda +
+					    gradCyl.dR * coordDeriv2.d2Rdlambda2 + gradCyl.dz * coordDeriv2.d2zdlambda2
+				:   // d2Phi/dnu^2
+					    hessCyl.dR2 * pow_2(coordDeriv.dRdnu) + hessCyl.dz2 * pow_2(coordDeriv.dzdnu) + 
+					    2*hessCyl.dRdz * coordDeriv.dRdnu*coordDeriv.dzdnu +
+					    gradCyl.dR * coordDeriv2.d2Rdnu2 + gradCyl.dz * coordDeriv2.d2zdnu2;
+			*der2 = 2 * (E - Phi - (mult+tauminusdelta) * dPhidtau)
+				  - tauminusdelta * mult * d2Phidtau2;
+		}
+	}
 }
 
 // Class to find the largest FD that yields a centrifugal barrier even
@@ -316,7 +316,6 @@ double FDfinder::bestFD(double &umin){//implements N-R search for p_u^2=dp_u^2/d
 		}
 		u-=dY0; Delta-=dY1;
 	}
-//	printf("%8.4f %8.4f %10.2e %10.2e\n",u,Delta/Delta0,p2,p2prime);
 	umin=u;
 	return Delta;
 }	
@@ -328,38 +327,38 @@ double FDfinder::bestFD(double &umin){//implements N-R search for p_u^2=dp_u^2/d
     the integrand is given by   p^n * (tau-delta)^a * tau^c  if p^2>0, otherwise 0.
 */
 class AxisymIntegrand: public math::IFunctionNoDeriv {
-public:
-    const AxisymFunctionBase& fnc;      ///< parameters of aux.fnc. (Staeckel or Fudge)
-    enum { nplus1, nminus1 } n;         ///< power of p: +1 or -1
-    enum { azero, aminus1, aminus2 } a; ///< power of (tau-delta): 0, -1, -2
-    enum { czero, cminus1 } c;          ///< power of tau: 0 or -1
-    explicit AxisymIntegrand(const AxisymFunctionBase& d) : fnc(d) {};
+	public:
+		const AxisymFunctionBase& fnc;      ///< parameters of aux.fnc. (Staeckel or Fudge)
+		enum { nplus1, nminus1 } n;         ///< power of p: +1 or -1
+		enum { azero, aminus1, aminus2 } a; ///< power of (tau-delta): 0, -1, -2
+		enum { czero, cminus1 } c;          ///< power of tau: 0 or -1
+		explicit AxisymIntegrand(const AxisymFunctionBase& d) : fnc(d) {};
 
     /** integrand for the expressions for actions and their derivatives 
         (e.g.Sanders 2012, eqs. A1, A4-A12).  It uses the auxiliary function to compute momentum,
         and multiplies it by some powers of (tau-delta) and tau.
     */
-    virtual double value(const double tau) const {
-        assert(tau>=0);
-        const coord::ProlSph& CS = fnc.point.coordsys;
-        const double tauminusdelta = tau - CS.Delta2;
-        const double p2 = fnc(tau) / 
-            (2*pow_2(tauminusdelta)*tau);
-        if(p2<0)
-            return 0;
-        double result = sqrt(p2);
-        if(n==nminus1)
-            result = 1/result;
-        if(a==aminus1)
-            result /= tauminusdelta;
-        else if(a==aminus2)
-            result /= pow_2(tauminusdelta);
-        if(c==cminus1)
-            result /= tau;
-        if(!isFinite(result))
-            result=0;  // ad hoc fix to avoid problems at the boundaries of integration interval
-        return result;
-    }
+		virtual double value(const double tau) const {
+			assert(tau>=0);
+			const coord::ProlSph& CS = fnc.point.coordsys;
+			const double tauminusdelta = tau - CS.Delta2;
+			const double p2 = fnc(tau) / 
+					  (2*pow_2(tauminusdelta)*tau);
+			if(p2<0)
+				return 0;
+			double result = sqrt(p2);
+			if(n==nminus1)
+				result = 1/result;
+			if(a==aminus1)
+				result /= tauminusdelta;
+			else if(a==aminus2)
+				result /= pow_2(tauminusdelta);
+			if(c==cminus1)
+				result /= tau;
+			if(!isFinite(result))
+				result=0;  // ad hoc fix to avoid problems at the boundaries of integration interval
+			return result;
+		}
 
     /** limiting case of the integration interval collapsing to a single point tau,
         i.e. f(tau)~=0, f'(tau)~=0, and f''(tau)<0 (downward-curving parabola).
@@ -367,53 +366,53 @@ public:
         while if the integrand contains f(tau)^(-1/2), then the limiting value of the integral
         is computed from the second derivative of f(tau) at the (single) point.
     */
-    double limitingIntegralValue(const double tau) const {
-        if(n==nplus1)
-            return 0;
-        assert(tau>=0);
-        const coord::ProlSph& CS = fnc.point.coordsys;
-        const double tauminusdelta = tau - CS.Delta2;
-        double fncder2;
-        fnc.evalDeriv(tau, NULL, NULL, &fncder2);  // ignore f(tau) and f'(tau), only take f''(tau)
-        double result = 2*M_PI * sqrt(-tau/fncder2) * fabs(tauminusdelta);
-        if(a==aminus1)
-            result /= tauminusdelta;
-        else if(a==aminus2)
-            result /= pow_2(tauminusdelta);
-        if(c==cminus1)
-            result /= tau;
-        return result;
-    }
+		double limitingIntegralValue(const double tau) const {
+			if(n==nplus1)
+				return 0;
+			assert(tau>=0);
+			const coord::ProlSph& CS = fnc.point.coordsys;
+			const double tauminusdelta = tau - CS.Delta2;
+			double fncder2;
+			fnc.evalDeriv(tau, NULL, NULL, &fncder2);  // ignore f(tau) and f'(tau), only take f''(tau)
+			double result = 2*M_PI * sqrt(-tau/fncder2) * fabs(tauminusdelta);
+			if(a==aminus1)
+				result /= tauminusdelta;
+			else if(a==aminus2)
+				result /= pow_2(tauminusdelta);
+			if(c==cminus1)
+				result /= tau;
+			return result;
+		}
 };
 
 /** A simple function that facilitates locating the root of auxiliary function 
     on a semi-infinite interval for lambda: instead of F(tau) we consider 
     F1(tau)=F(tau)/tau^2, which tends to a finite negative limit as tau tends to infinity. */
 class AxisymScaledForRootfinder: public math::IFunction {
-public:
-    const AxisymFunctionBase& fnc;
-    explicit AxisymScaledForRootfinder(const AxisymFunctionBase& d) : fnc(d) {};
-    virtual unsigned int numDerivs() const { return fnc.numDerivs(); }
-    virtual void evalDeriv(const double tau, 
-        double* val=0, double* der=0, double* der2=0) const
-    {
-        assert(tau>=0);
-        if(der2)
-            *der2 = NAN;
-        if(/*!isFinite(tau)*/tau>1e100) {
-            if(val)
-                *val = fnc.E; // the asymptotic value
-            if(der)
-                *der = NAN;    // we don't know it
-            return;
-        }
-        double fval, fder;
-        fnc.evalDeriv(tau, &fval, der? &fder : NULL);
-        if(val)
-            *val = fval / pow_2(tau);
-        if(der)
-            *der = (fder - 2*fval/tau) / pow_2(tau);
-    }
+	public:
+		const AxisymFunctionBase& fnc;
+		explicit AxisymScaledForRootfinder(const AxisymFunctionBase& d) : fnc(d) {};
+		virtual unsigned int numDerivs() const { return fnc.numDerivs(); }
+		virtual void evalDeriv(const double tau, 
+				       double* val=0, double* der=0, double* der2=0) const
+		{
+			assert(tau>=0);
+			if(der2)
+				*der2 = NAN;
+			if(/*!isFinite(tau)*/tau>1e100) {
+				if(val)
+					*val = fnc.E; // the asymptotic value
+				if(der)
+					*der = NAN;    // we don't know it
+				return;
+			}
+			double fval, fder;
+			fnc.evalDeriv(tau, &fval, der? &fder : NULL);
+			if(val)
+				*val = fval / pow_2(tau);
+			if(der)
+				*der = (fder - 2*fval/tau) / pow_2(tau);
+		}
 };
 
 /** Compute the intervals of tau for which p^2(tau)>=0, 
@@ -422,43 +421,43 @@ public:
 */
 AxisymIntLimits findIntegrationLimitsAxisym(const AxisymFunctionBase& fnc)
 {
-    AxisymIntLimits lim;
-    const double delta=fnc.point.coordsys.Delta2;
+	AxisymIntLimits lim;
+	const double delta=fnc.point.coordsys.Delta2;
 
     // figure out the value of function at and around some important points
-    double f_zero = fnc(0);
-    double f_lambda, df_lambda, d2f_lambda;
-    fnc.evalDeriv(fnc.point.lambda, &f_lambda, &df_lambda, &d2f_lambda);
-    lim.nu_min = 0;
-    lim.nu_max = lim.lambda_min = lim.lambda_max = NAN;  // means not yet determined
-    double nu_upper = delta;     // upper bound on the interval to locate the root for nu_max
-    double lambda_lower = delta; // lower bound on the interval for lambda_min
+	double f_zero = fnc(0);
+	double f_lambda, df_lambda, d2f_lambda;
+	fnc.evalDeriv(fnc.point.lambda, &f_lambda, &df_lambda, &d2f_lambda);
+	lim.nu_min = 0;
+	lim.nu_max = lim.lambda_min = lim.lambda_max = NAN;  // means not yet determined
+	double nu_upper = delta;     // upper bound on the interval to locate the root for nu_max
+	double lambda_lower = delta; // lower bound on the interval for lambda_min
 
-    if(fnc.Lz==0) {
-        // special case: f(delta) = -0.5 Lz^2 = 0, may have either tube or box orbit in the meridional plane
-        double deltaminus = delta*(1-1e-15), deltaplus = delta*(1+1e-15);
-        if(fnc(deltaminus)<0) {  // box orbit: f<0 at some interval left of delta
-            if(f_zero>0)         // there must be a range of nu where the function is positive
-                nu_upper = deltaminus;
-            else 
-                lim.nu_max = lim.nu_min;
-        } else
-            lim.nu_max = delta;
-        if(fnc(deltaplus)<0)     // tube orbit: f must be negative on some interval right of delta
-            lambda_lower = deltaplus;
-        else
-            lim.lambda_min = delta;
-    }
+	if(fnc.Lz==0) {
+	// special case: f(delta) = -0.5 Lz^2 = 0, may have either tube or box orbit in the meridional plane
+		double deltaminus = delta*(1-1e-15), deltaplus = delta*(1+1e-15);
+		if(fnc(deltaminus)<0) {  // box orbit: f<0 at some interval left of delta
+			if(f_zero>0)         // there must be a range of nu where the function is positive
+				nu_upper = deltaminus;
+			else 
+				lim.nu_max = lim.nu_min;
+		} else
+			lim.nu_max = delta;
+		if(fnc(deltaplus)<0)     // tube orbit: f must be negative on some interval right of delta
+			lambda_lower = deltaplus;
+		else
+			lim.lambda_min = delta;
+	}
 
-    if(!isFinite(lim.nu_max)) 
-    {   // find range for J_nu (i.e. J_z) if it has not been determined at the previous stage
-        if(f_zero>0)
-            lim.nu_max = math::findRoot(fnc, fabs(fnc.point.nu), nu_upper, ACCURACY_RANGE);
-        if(!isFinite(lim.nu_max))
-            // means that the value f(nu) was just very slightly negative, or that f(0)<=0
-            // i.e. this is a clear upper boundary of the range of allowed nu
-            lim.nu_max = fabs(fnc.point.nu);
-    }
+	if(!isFinite(lim.nu_max)) 
+	{   // find range for J_nu (i.e. J_z) if it has not been determined at the previous stage
+		if(f_zero>0)
+			lim.nu_max = math::findRoot(fnc, fabs(fnc.point.nu), nu_upper, ACCURACY_RANGE);
+		if(!isFinite(lim.nu_max))
+	    // means that the value f(nu) was just very slightly negative, or that f(0)<=0
+	    // i.e. this is a clear upper boundary of the range of allowed nu
+			lim.nu_max = fabs(fnc.point.nu);
+	}
 
     // find the range for J_lambda (i.e. J_r).
     // We assume that the point lambda is inside or at the edge of the interval where f(lambda)>=0,
@@ -470,79 +469,79 @@ AxisymIntLimits findIntegrationLimitsAxisym(const AxisymFunctionBase& fnc)
     // this will be the point that is guaranteed to lie "well inside" the interval of positive f,
     // or, in other words, that the intervals [delta, lambda_pos] and [lambda_pos, infinity)
     // both firmly bracket the roots (respectively, lambda_min and lambda_max).
-    double lambda_pos = fnc.point.lambda;
+	double lambda_pos = fnc.point.lambda;
     // linear extrapolation to estimate the location of the nearest root for lambda
-    double dxToRoot   = -f_lambda / df_lambda;
+	double dxToRoot   = -f_lambda / df_lambda;
 
-    if(f_lambda<=0 || fabs(dxToRoot) < fnc.point.lambda * MINIMUM_RANGE)
-    {   // we are at the endpoint of the interval where f is positive,
-        // so at least one of the endpoints may be assigned immediately
-        if(df_lambda>=0) {
-            lim.lambda_min = fnc.point.lambda;
-        } 
-        if(df_lambda<=0) {
-            lim.lambda_max = fnc.point.lambda;
-            if(fnc.point.lambda == delta)  // can't be lower than that! means that the range is zero
-                lim.lambda_min = delta;
-        }
+	if(f_lambda<=0 || fabs(dxToRoot) < fnc.point.lambda * MINIMUM_RANGE)
+	{   // we are at the endpoint of the interval where f is positive,
+	// so at least one of the endpoints may be assigned immediately
+		if(df_lambda>=0) {
+			lim.lambda_min = fnc.point.lambda;
+		} 
+		if(df_lambda<=0) {
+			lim.lambda_max = fnc.point.lambda;
+			if(fnc.point.lambda == delta)  // can't be lower than that! means that the range is zero
+				lim.lambda_min = delta;
+		}
 
-        // now it may also happen that we are at or very near the shell orbit,
-        // i.e. both lambda_min and lambda_max are very close (or equal) to lambda.
-        // This happens when d^2 f / d lambda^2 < 0, i.e. the function is a downward parabola,
-        // and the distance between its roots is very small, or even it does not cross zero at all
-        // (of course, this could only happen due to roundoff errors).
-        // the second derivative must be negative, and the determinant either small or negative.
-        bool nearShell = d2f_lambda < 0 &&
-            pow_2(df_lambda) - 2*f_lambda*d2f_lambda -
-            pow_2(fnc.point.lambda * MINIMUM_RANGE * d2f_lambda) < 0;
+	// now it may also happen that we are at or very near the shell orbit,
+	// i.e. both lambda_min and lambda_max are very close (or equal) to lambda.
+	// This happens when d^2 f / d lambda^2 < 0, i.e. the function is a downward parabola,
+	// and the distance between its roots is very small, or even it does not cross zero at all
+	// (of course, this could only happen due to roundoff errors).
+	// the second derivative must be negative, and the determinant either small or negative.
+		bool nearShell = d2f_lambda < 0 &&
+				 pow_2(df_lambda) - 2*f_lambda*d2f_lambda -
+				 pow_2(fnc.point.lambda * MINIMUM_RANGE * d2f_lambda) < 0;
 
-        // However, the complication is that when lambda = delta, the second derivative is not defined.
-        // Therefore, we first shift the point (lambda_pos) by a small amount in the direction of
-        // increasing f, then recompute the second derivative, and then again test the condition.
-        double safeOffset = fmin(0.5*fabs(df_lambda / d2f_lambda), fnc.point.lambda * MINIMUM_RANGE);
-        lambda_pos += fmax(dxToRoot, safeOffset) * (df_lambda>=0?1:-1);
-        double f_lampos, df_lampos, d2f_lampos;
-        fnc.evalDeriv(lambda_pos, &f_lampos, &df_lampos, &d2f_lampos);
-        nearShell |= d2f_lampos < 0 &&
-            pow_2(df_lampos) - 2*f_lampos*d2f_lampos -
-            pow_2(fnc.point.lambda * MINIMUM_RANGE * d2f_lampos) < 0;
+	// However, the complication is that when lambda = delta, the second derivative is not defined.
+	// Therefore, we first shift the point (lambda_pos) by a small amount in the direction of
+	// increasing f, then recompute the second derivative, and then again test the condition.
+		double safeOffset = fmin(0.5*fabs(df_lambda / d2f_lambda), fnc.point.lambda * MINIMUM_RANGE);
+		lambda_pos += fmax(dxToRoot, safeOffset) * (df_lambda>=0?1:-1);
+		double f_lampos, df_lampos, d2f_lampos;
+		fnc.evalDeriv(lambda_pos, &f_lampos, &df_lampos, &d2f_lampos);
+		nearShell |= d2f_lampos < 0 &&
+			     pow_2(df_lampos) - 2*f_lampos*d2f_lampos -
+			     pow_2(fnc.point.lambda * MINIMUM_RANGE * d2f_lampos) < 0;
 
-        // unfortunately, f(lambda) is subject to such a severe cancellation error
-        // that the above procedure does not always correctly identify a near-shell orbit.
-        // therefore, we declare this to be the case even when the distance-between-roots condition
-        // is not met, but the function is still negative, which would fail the root-finder anyway.
-        if(nearShell || f_lampos < 0) {
-            lim.lambda_min = lim.lambda_max = fnc.point.lambda;
-        }
-    }
-    if(!isFinite(lim.lambda_min)) {  // not yet determined 
-        lim.lambda_min = math::findRoot(fnc, lambda_lower, lambda_pos, ACCURACY_RANGE);
-    }
-    if(!isFinite(lim.lambda_max)) {
-        lim.lambda_max = math::findRoot(AxisymScaledForRootfinder(fnc),
-            math::ScalingSemiInf(lambda_pos) /* find root on [lambda_pos..+inf) */, ACCURACY_RANGE);
-    }
+	// unfortunately, f(lambda) is subject to such a severe cancellation error
+	// that the above procedure does not always correctly identify a near-shell orbit.
+	// therefore, we declare this to be the case even when the distance-between-roots condition
+	// is not met, but the function is still negative, which would fail the root-finder anyway.
+		if(nearShell || f_lampos < 0) {
+			lim.lambda_min = lim.lambda_max = fnc.point.lambda;
+		}
+	}
+	if(!isFinite(lim.lambda_min)) {  // not yet determined 
+		lim.lambda_min = math::findRoot(fnc, lambda_lower, lambda_pos, ACCURACY_RANGE);
+	}
+	if(!isFinite(lim.lambda_max)) {
+		lim.lambda_max = math::findRoot(AxisymScaledForRootfinder(fnc),
+						math::ScalingSemiInf(lambda_pos) /* find root on [lambda_pos..+inf) */, ACCURACY_RANGE);
+	}
 
     // sanity check
-    if(utils::verbosityLevel >= utils::VL_WARNING &&
-        (!isFinite(lim.lambda_min+lim.lambda_max+lim.nu_max+lim.nu_min)
-        || fabs(fnc.point.nu) > lim.nu_max
-        || fnc.point.lambda   < lim.lambda_min
-        || fnc.point.lambda   > lim.lambda_max))
-        utils::msg(utils::VL_WARNING, "findIntegrationLimitsAxisym", "failed at lambda="+
-            utils::toString(fnc.point.lambda)+", nu="+utils::toString(fnc.point.nu)+", E="+
-            utils::toString(fnc.E)+", Lz="+utils::toString(fnc.Lz)+", I3="+utils::toString(fnc.I3));
+	if(utils::verbosityLevel >= utils::VL_WARNING &&
+	   (!isFinite(lim.lambda_min+lim.lambda_max+lim.nu_max+lim.nu_min)
+	    || fabs(fnc.point.nu) > lim.nu_max
+	    || fnc.point.lambda   < lim.lambda_min
+	    || fnc.point.lambda   > lim.lambda_max))
+		utils::msg(utils::VL_WARNING, "findIntegrationLimitsAxisym", "failed at lambda="+
+			   utils::toString(fnc.point.lambda)+", nu="+utils::toString(fnc.point.nu)+", E="+
+			   utils::toString(fnc.E)+", Lz="+utils::toString(fnc.Lz)+", I3="+utils::toString(fnc.I3));
 
     // ignore extremely small intervals
-    if(!(lim.nu_max >= delta * MINIMUM_RANGE))
-        lim.nu_max = 0;
-    if(!(lim.lambda_max-lim.lambda_min >= delta * MINIMUM_RANGE))
-        lim.lambda_min = lim.lambda_max = fnc.point.lambda;
+	if(!(lim.nu_max >= delta * MINIMUM_RANGE))
+		lim.nu_max = 0;
+	if(!(lim.lambda_max-lim.lambda_min >= delta * MINIMUM_RANGE))
+		lim.lambda_min = lim.lambda_max = fnc.point.lambda;
 
     // choose the order of Gauss-Legendre integration depending on the approximate eccentricity
-    double RperiOverRapo = sqrt((lim.lambda_min-delta) / (lim.lambda_max-delta));
-    lim.integrOrder = integrOrder(RperiOverRapo);
-    return lim;
+	double RperiOverRapo = sqrt((lim.lambda_min-delta) / (lim.lambda_max-delta));
+	lim.integrOrder = integrOrder(RperiOverRapo);
+	return lim;
 }
 
 /** Compute the derivatives of actions (Jr, Jz, Jphi) over integrals of motion (E, Lz, I3),
@@ -655,19 +654,19 @@ AxisymGenFuncDerivatives computeGenFuncDerivatives(
     separately for the "nu" and "lambda" branches (equation A1 in Sanders 2012). */
 Actions computeActions(const AxisymFunctionBase& fnc, const AxisymIntLimits& lim)
 {
-    Actions acts;
-    AxisymIntegrand integrand(fnc);
-    math::ScaledIntegrand<math::ScalingCub>
-        transf_l(math::ScalingCub(lim.lambda_min, lim.lambda_max), integrand),
-        transf_n(math::ScalingCub(lim.nu_min,     lim.nu_max),     integrand);
-    integrand.n = AxisymIntegrand::nplus1;  // momentum goes into the numerator
-    integrand.a = AxisymIntegrand::azero;
-    integrand.c = AxisymIntegrand::czero;
-    acts.Jr = math::integrateGL(transf_l, 0, 1, lim.integrOrder) / M_PI;
+	Actions acts;
+	AxisymIntegrand integrand(fnc);
+	math::ScaledIntegrand<math::ScalingCub>
+			transf_l(math::ScalingCub(lim.lambda_min, lim.lambda_max), integrand),
+	transf_n(math::ScalingCub(lim.nu_min,     lim.nu_max),     integrand);
+	integrand.n = AxisymIntegrand::nplus1;  // momentum goes into the numerator
+	integrand.a = AxisymIntegrand::azero;
+	integrand.c = AxisymIntegrand::czero;
+	acts.Jr = math::integrateGL(transf_l, 0, 1, lim.integrOrder) / M_PI;
     // factor of 2 in Jz because we only integrate over half of the orbit (z>=0)
-    acts.Jz = math::integrateGL(transf_n, 0, 1, lim.integrOrder) / M_PI * 2;
-    acts.Jphi = fnc.Lz;
-    return acts;
+	acts.Jz = math::integrateGL(transf_n, 0, 1, lim.integrOrder) / M_PI * 2;
+	acts.Jphi = fnc.Lz;
+	return acts;
 }
 
 /** Compute angles from the derivatives of integrals of motion and the generating function
@@ -774,12 +773,12 @@ void createGridFocalDistance(
     /*output: radius of shell orbit normalized to R_circ(E) */ math::Matrix<double>& grid2dR)
 {
     int sizeE = gridE.size(), sizeL = gridL.size(), sizeEL = (sizeE-1) * (sizeL-1);
-    grid2dD = math::Matrix<double>(sizeE, sizeL);
-    grid2dR = math::Matrix<double>(sizeE, sizeL);
+    //grid2dD = math::Matrix<double>(sizeE, sizeL);
+    //grid2dR = math::Matrix<double>(sizeE, sizeL);
     std::string errorMessage;  // store the error text in case of an exception in the openmp block
     // loop over the grid in E and L (combined index for better load balancing)
 #ifdef _OPENMP
-#pragma omp parallel for schedule(dynamic)
+//#pragma omp parallel for schedule(dynamic)
 #endif
     for(int iEL = 0; iEL < sizeEL; iEL++) {
         try{
@@ -789,7 +788,7 @@ void createGridFocalDistance(
             double Rc = R_circ(pot, E);
             double vc = v_circ(pot, Rc);
             double Lc = Rc * vc;
-            double Lz = Lc * gridL[iL];
+	    double Lz = Lc * gridL[iL];
             double Rsh, FD  = estimateFocalDistanceShellOrbit(pot, E, Lz, &Rsh);
             grid2dD(iE, iL) = FD;
             grid2dR(iE, iL) = Rsh / Rc;
@@ -857,8 +856,8 @@ EXP ActionFinderAxisymFudge::ActionFinderAxisymFudge(
     }
 
     // initialize the interpolator for the focal distance as a function of E and Lzrel
-    math::Matrix<double> grid2dD;  // focal distance
-    math::Matrix<double> grid2dR;  // Rshell / Rcirc(E)
+    math::Matrix<double> grid2dD(gridE.size(),gridL.size());  // focal distance
+    math::Matrix<double> grid2dR(gridE.size(),gridL.size());  // Rshell / Rcirc(E)
     createGridFocalDistance(*pot, gridE, gridL, /*output*/ grid2dD, grid2dR);
     interpD = math::LinearInterpolator2d(gridEscaled, gridLscaled, grid2dD); //, /*regularize*/true);
 
@@ -882,7 +881,6 @@ EXP ActionFinderAxisymFudge::ActionFinderAxisymFudge(
                 strm << '\n';
             }
         }
-        return;
     }
 
     // we're constructing an interpolation grid for Jr and Jz in (E,Lz,I3), suitably scaled

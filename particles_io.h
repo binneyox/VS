@@ -49,6 +49,14 @@ EXP void writeSnapshot(
     const double time=NAN,
     const bool append=false);
 
-EXP std::vector<coord::PosVelCar>  readSnapshotCMP(const std::string&, const units::ExternalUnits&);
+/*
+template<typename ParticleT>
+EXP void writeSnapshotCMP(const std::string&, const ParticleArray<ParticleT>&,
+			  const units::ExternalUnits&, const std::string& header,
+			  const double time);
+*/
+EXP std::vector<coord::PosVelCar>  readSnapshotCMP(
+	const std::string&,
+	const units::ExternalUnits&);
 
 }  // namespace

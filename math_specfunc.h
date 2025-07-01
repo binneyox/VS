@@ -19,6 +19,9 @@ EXP void gegenbauerArray(const int nmax, double lambda, double x, double* result
 /** Inverse error function (defined for -1<x<1) */
 EXP double erfinv(const double x);
 
+/** Exponential integral int_1^infty dt e^{-x*t}/t */
+EXP double E1(const double x);
+
 /** Gauss's hypergeometric function 2F1(a, b; c; x) */
 EXP double hypergeom2F1(const double a, const double b, const double c, const double x);
 

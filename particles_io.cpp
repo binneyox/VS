@@ -178,7 +178,7 @@ template<> inline std::string formatCMPParticle<ParticleAux>(
 
 
 template<typename ParticleT>
-void writeSnapshotCMP(
+EXP void writeSnapshotCMP(
 		       const std::string& fileName,
 		       const ParticleArray<ParticleT>& points,
 		       const units::ExternalUnits& conv,
@@ -187,7 +187,7 @@ void writeSnapshotCMP(
 {
 	std::ofstream strm(fileName.c_str(), std::ios::out);
 	if(!strm) 
-		throw std::runtime_error("writeSnapshotText: cannot write to file "+fileName);
+		throw std::runtime_error("writeSnapshotCMP: cannot write to file "+fileName);
 //	if(!header.empty())
 //		strm << "#" << header << "\n";
 //	if(isFinite(time))
@@ -196,23 +196,7 @@ void writeSnapshotCMP(
 	for(size_t indx=0; indx<points.size(); indx++)
 		strm << formatCMPParticle<ParticleT>(points[indx], conv);
 	if(!strm.good())
-		throw std::runtime_error("writeSnapshotText: cannot write to file "+fileName);
-}
-
-std::vector<coord::PosVelCar> readSnapshotCMP(const std::string& fileName, const units::ExternalUnits& conv)
-{
-	FILE *ifile; fopen_s(&ifile,fileName.c_str(),"r");
-	if(ifile==NULL) 
-		throw std::runtime_error("readSnapshotCMP: cannot read from file "+fileName);
-	std::vector<coord::PosVelCar> points;
-	float xv[6]; int np=0;
-	while(utils::jjbget(ifile,xv,6) && !feof(ifile)){
-		coord::PosVelCar pt(xv[0] * conv.lengthUnit,xv[1] * conv.lengthUnit,xv[2] * conv.lengthUnit,
-				    xv[3] * conv.velocityUnit,xv[4] * conv.velocityUnit,xv[5] * conv.velocityUnit);
-		points.push_back(pt); np++;
-	}
-	printf("%d phase-space points read\n",np);
-	return points;
+		throw std::runtime_error("writeSnapshotCMP: cannot write to file "+fileName);
 }
 
 
@@ -543,7 +527,7 @@ EXP ParticleArrayAux readSnapshot(
 
 
 template<typename ParticleT>
-EXP inline void writeSnapshot(
+inline void writeSnapshot(
     const std::string& fileName,
     const ParticleArray<ParticleT>& particles,
     const std::string &fileFormat,
@@ -631,6 +615,22 @@ template<> EXP void writeSnapshot(
 {
     writeSnapshot(fileName, ParticleArray<coord::PosVelCar>(particles),
         fileFormat, unitConverter, header, time, append);
+}
+
+EXP std::vector<coord::PosVelCar> readSnapshotCMP(const std::string& fileName, const units::ExternalUnits& conv)
+{
+	FILE *ifile; fopen_s(&ifile,fileName.c_str(),"r");
+	if(ifile==NULL) 
+		throw std::runtime_error("readSnapshotCMP: cannot read from file "+fileName);
+	std::vector<coord::PosVelCar> points;
+	float xv[6]; int np=0;
+	while(utils::jjbget(ifile,xv,6) && !feof(ifile)){
+		coord::PosVelCar pt(xv[0] * conv.lengthUnit,xv[1] * conv.lengthUnit,xv[2] * conv.lengthUnit,
+				    xv[3] * conv.velocityUnit,xv[4] * conv.velocityUnit,xv[5] * conv.velocityUnit);
+		points.push_back(pt); np++;
+	}
+	printf("%d phase-space points read\n",np);
+	return points;
 }
 
 }  // namespace particles

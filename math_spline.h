@@ -111,11 +111,20 @@ public:
     /** return the upper end of definition interval */
     double xmax() const { return xval.size()? xval.back() : NAN; }
 
+    /** return the lower end of definition interval */
+    double ymin() const { return fval.size()? fval.front() : NAN; }
+
+    /** return the upper end of definition interval */
+    double ymax() const { return fval.size()? fval.back() : NAN; }
+
     /** check if the spline is initialized */
     bool empty() const { return fval.empty(); }
 
     /** return the array of spline nodes */
     const std::vector<double>& xvalues() const { return xval; }
+
+    /** return the array of spline values */
+    const std::vector<double>& yvalues() const { return fval; }
 
 protected:
     std::vector<double> xval;  ///< grid nodes
@@ -212,6 +221,11 @@ public:
     */
     virtual void evalDeriv(double x, double* value=NULL, double* deriv=NULL, double* deriv2=NULL) const;
 
+    virtual double value(double x) const{
+	    double val; evalDeriv(x,&val);
+	    return val;
+    }
+
     /** return the integral of spline function times x^n on the interval [x1..x2] */
     virtual double integrate(double x1, double x2, int n=0) const;
 
@@ -223,6 +237,10 @@ public:
     /** check if the spline is everywhere monotonic on the given interval */
     bool isMonotonic() const;
 
+    /** return coefficients of t^0, t^3 where t=(x-xval[ind])/(xval[ind+1]-xval[ind])**/
+    void getCoeffs(const unsigned int ind,
+		       double* A0, double* A1, double* A2, double* A3) const;
+    
 private:
     std::vector<double> fder;  ///< first derivatives of interpolated function at grid nodes
 };

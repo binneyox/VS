@@ -6,6 +6,7 @@
 #include <cassert>
 #include <stdexcept>
 #include <gsl/gsl_sf_erf.h>
+#include <gsl/gsl_sf_expint.h>
 #include <gsl/gsl_sf_gegenbauer.h>
 #include <gsl/gsl_sf_hyperg.h>
 #include <gsl/gsl_sf_gamma.h>
@@ -51,6 +52,10 @@ double erfinv(const double x)
     double f = gsl_sf_erf(z) - x, fp = 2/M_SQRTPI * exp(-z*z), fpp = -2*z*fp;
     z -= f*fp / (fp*fp - 0.5*f*fpp);
     return z;
+}
+
+double E1(const double x){
+	return gsl_sf_expint_E1(x);
 }
 
 double hypergeom2F1(const double a, const double b, const double c, const double x)

@@ -18,10 +18,8 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="actions_genfnc.cpp" />
     <ClCompile Include="actions_focal_distance_finder.cpp" />
     <ClCompile Include="cubature.cpp" />
-    <ClCompile Include="actions_isochrone.cpp" />
     <ClCompile Include="actions_spherical.cpp" />
     <ClCompile Include="coord.cpp" />
     <ClCompile Include="df_base.cpp" />
@@ -61,17 +59,6 @@
     <ClCompile Include="utils_config.cpp" />
     <ClCompile Include="potential_perfect_ellipsoid.cpp" />
     <ClCompile Include="galaxymodel_jeans.cpp" />
-    <ClCompile Include="torus\chb.cpp" />
-    <ClCompile Include="torus\generatingfunction.cpp" />
-    <ClCompile Include="torus\orb.cpp" />
-    <ClCompile Include="torus\pjmcoords.cpp" />
-    <ClCompile Include="torus\pjmnum.cpp" />
-    <ClCompile Include="torus\point_closedorbitcheby.cpp" />
-    <ClCompile Include="torus\point_none.cpp" />
-    <ClCompile Include="torus\torus.cpp" />
-    <ClCompile Include="torus\toy_isochrone.cpp" />
-    <ClCompile Include="torus\wd_numerics.cpp" />
-    <ClCompile Include="actions_torus.cpp" />
     <ClCompile Include="math_spline.cpp">
       <Filter>Header Files</Filter>
     </ClCompile>
@@ -81,16 +68,19 @@
     <ClCompile Include="df_factory.cpp" />
     <ClCompile Include="df_disk.cpp" />
     <ClCompile Include="Oxford.cpp" />
-    <ClCompile Include="actions2d.cpp" />
     <ClCompile Include="actions_staeckel.cpp" />
     <ClCompile Include="obs_los.cpp" />
-    <ClCompile Include="obs_base.cpp" />
     <ClCompile Include="obs_dust.cpp" />
     <ClCompile Include="df_halo_new.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="torus\fit2.cpp" />
-    <ClCompile Include="torus\fit.cpp" />
+    <ClCompile Include="potential_bars.cpp" />
+    <ClCompile Include="math_fourier.cpp" />
+    <ClCompile Include="actions_newisochrone.cpp" />
+    <ClCompile Include="actions_newgenfnc.cpp" />
+    <ClCompile Include="actions_newtorus.cpp" />
+    <ClCompile Include="obs_base.cpp" />
+    <ClCompile Include="df_ergodic.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="alloca.h">
@@ -102,13 +92,7 @@
     <ClInclude Include="df_base.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="actions_genfnc.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="actions_focal_distance_finder.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="actions_isochrone.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="actions_staeckel.h">
@@ -252,49 +236,6 @@
     <ClInclude Include="galaxymodel_jeans.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="torus\constants.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="torus\fit.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="torus\generatingfunction.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="torus\orb.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="torus\pi.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="torus\pjmcoords.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="torus\point_closedorbitcheby.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="torus\point_none.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="torus\torus.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="torus\units.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="torus\wd_numerics.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="torus\wd_freememory.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="torus\wd_matrix.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="torus\toy_isochrone.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="actions_torus.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="math_core.h">
@@ -321,9 +262,6 @@
     <ClInclude Include="obs.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="actions2d.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="obs_los.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -331,6 +269,24 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="obs_dust.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="potential_bars.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="math_fourier.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="actions_newisochrone.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="actions_newtorus.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="actions_newgenfnc.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="df_ergodic.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

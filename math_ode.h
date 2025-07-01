@@ -39,7 +39,7 @@ public:
         \param[in]  x  is the solution vector;
         \return  the additional multiplicative factor <=1 in error tolerance, or 1 if not applicable
     */
-    virtual double getAccuracyFactor(const double /*t*/, const double /*x*/[]) const { return 1; }
+    virtual double getAccuracyFactor(const double /*t*/, const double /*x*/[]) const { return .1; }
 
     /** Return the size of ODE system (number of variables N) */
     virtual unsigned int size() const = 0;

@@ -146,6 +146,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="actions_focal_distance_finder.cpp" />
+    <ClCompile Include="actions_harmonicoscillator.cpp" />
     <ClCompile Include="actions_newgenfnc.cpp" />
     <ClCompile Include="actions_newisochrone.cpp" />
     <ClCompile Include="actions_newtorus.cpp" />
@@ -191,7 +192,6 @@
     <ClCompile Include="obs_los.cpp" />
     <ClCompile Include="orbit.cpp" />
     <ClCompile Include="orbit_lyapunov.cpp" />
-    <ClCompile Include="Oxford.cpp" />
     <ClCompile Include="particles_io.cpp" />
     <ClCompile Include="potential_analytic.cpp" />
     <ClCompile Include="potential_bars.cpp" />
@@ -214,6 +214,7 @@
   <ItemGroup>
     <ClInclude Include="actions_base.h" />
     <ClInclude Include="actions_focal_distance_finder.h" />
+    <ClInclude Include="actions_harmonicoscillator.h" />
     <ClInclude Include="actions_newgenfnc.h" />
     <ClInclude Include="actions_newisochrone.h" />
     <ClInclude Include="actions_newtorus.h" />
@@ -260,7 +261,6 @@
     <ClInclude Include="obs_los.h" />
     <ClInclude Include="orbit.h" />
     <ClInclude Include="orbit_lyapunov.h" />
-    <ClInclude Include="Oxford.h" />
     <ClInclude Include="particles_base.h" />
     <ClInclude Include="potential_analytic.h" />
     <ClInclude Include="potential_bars.h" />

@@ -67,86 +67,6 @@ struct AxisymGenFuncDerivatives {
     double dSdE, dSdI3, dSdLz;
 };
 
-/** aggregate class that contains the point in prolate spheroidal coordinates,
-    integrals of motion, and reference to the potential,
-    shared between Axisymmetric Staeckel  and Axisymmetric Fudge action finders;
-    only the coordinates and the two classical integrals are in common between them.
-    It also implements the IFunction interface, providing the "auxiliary function" 
-    that is used in finding the integration limits and computing actions and angles;
-    this function F(tau) is related to the canonical momentum p(tau)  as 
-    \f$  p(tau)^2 = F(tau) / (2*(tau+alpha)^2*(tau+gamma))  \f$,
-    and the actual implementation of this function is specific to each descendant class.
-*/
-class AxisymFunctionBase: public math::IFunction {
-public:
-    coord::PosVelProlSph point; ///< position/derivative in prolate spheroidal coordinates
-    const double E;             ///< total energy
-    const double Lz;            ///< z-component of angular momentum
-    const double I3;            ///< third integral
-    AxisymFunctionBase(const coord::PosVelProlSph& _point, double _E, double _Lz, double _I3) :
-        point(_point), E(_E), Lz(_Lz), I3(_I3) {};
-};
-
-// ------ SPECIALIZED functions for Staeckel action finder -------
-
-/** parameters of potential, integrals of motion, and prolate spheroidal coordinates 
-    SPECIALIZED for the Axisymmetric Staeckel action finder */
-class AxisymFunctionStaeckel: public AxisymFunctionBase {
-public:
-    const math::IFunction& fncG;  ///< single-variable function of a Staeckel potential
-    AxisymFunctionStaeckel(const coord::PosVelProlSph& _point, double _E, double _Lz, double _I3,
-        const math::IFunction& _fncG) :
-        AxisymFunctionBase(_point, _E, _Lz, _I3), fncG(_fncG) {};
-
-    /** auxiliary function that enters the definition of canonical momentum for 
-        for the Staeckel potential: it is the numerator of eq.50 in de Zeeuw(1985);
-        the argument tau is replaced by tau+gamma >= 0. */
-    virtual void evalDeriv(const double tauplusgamma, 
-        double* value=0, double* deriv=0, double* deriv2=0) const;
-    virtual unsigned int numDerivs() const { return 2; }
-};
-
-/** compute integrals of motion in the Staeckel potential of an oblate perfect ellipsoid, 
-    together with the coordinates in its prolate spheroidal coordinate system 
-*/
-AxisymFunctionStaeckel findIntegralsOfMotionOblatePerfectEllipsoid(
-    const potential::OblatePerfectEllipsoid& potential, 
-    const coord::PosVelCyl& point)
-{
-    double E = totalEnergy(potential, point);
-    double Lz= coord::Lz(point);
-    const coord::ProlSph& coordsys = potential.coordsys();
-    const coord::PosVelProlSph pprol = coord::toPosVel<coord::Cyl, coord::ProlSph>(point, coordsys);
-    double Glambda;
-    potential.evalDeriv(pprol.lambda, &Glambda);
-    double I3;
-    if(point.z==0)   // special case: nu=0
-        I3 = 0.5 * pow_2(point.vz) * (pow_2(point.R) + coordsys.Delta2);
-    else   // general case: eq.3 in Sanders(2012)
-        I3 = fmax(0,
-            pprol.lambda * (E - pow_2(Lz) / 2 / (pprol.lambda - coordsys.Delta2) + Glambda) -
-            pow_2( pprol.lambdadot * (pprol.lambda - fabs(pprol.nu)) ) / 
-            (8 * (pprol.lambda - coordsys.Delta2) * pprol.lambda) );
-    return AxisymFunctionStaeckel(pprol, E, Lz, I3, potential);
-}
-
-/** auxiliary function that enters the definition of canonical momentum for 
-    for the Staeckel potential: it is the numerator of eq.50 in de Zeeuw(1985);
-    except that in our convention `tau` >= 0 is equivalent to `tau+gamma` from that paper. */
-void AxisymFunctionStaeckel::evalDeriv(const double tau, 
-    double* val, double* der, double* der2) const
-{
-    assert(tau>=0);
-    double G, dG, d2G;
-    fncG.evalDeriv(tau, &G, der || der2 ? &dG : NULL, der2 ? &d2G : NULL);
-    const double tauminusdelta = tau - point.coordsys.Delta2;
-    if(val)
-        *val = ( (E + G) * tau - I3 ) * tauminusdelta - Lz*Lz/2 * tau;
-    if(der)
-        *der = (E + G) * (tau + tauminusdelta) + dG * tau * tauminusdelta - I3 - Lz*Lz/2;
-    if(der2)
-        *der2 = 2 * (E + G) + 2 * dG * (tau + tauminusdelta) + d2G * tau * tauminusdelta;
-}
 
 // -------- SPECIALIZED functions for the Axisymmetric Fudge action finder --------
 
@@ -252,74 +172,6 @@ void AxisymFunctionFudge::evalDeriv(const double tau,
 	}
 }
 
-// Class to find the largest FD that yields a centrifugal barrier even
-// with Lz=0. Rsh is the radius of the shell orbit and vR is vR is
-// what's required to create the orbit of interest shooting from
-// (Rsh,0). Delta is an estimate of FD. The method bestFD() returns the
-// FD at second argument; the first is the value of u at which p_u^2=0
-//
-class FDfinder{
-	private:
-		double E,Rsh,vR,P0,Delta0,EmP0;
-		const potential::PtrPotential pot;
-	public:
-		FDfinder(const double _E,const double _Rsh,const double _vR,
-				   const double _Delta,
-				   const potential::PtrPotential _pot) :
-		    E(_E), Rsh(_Rsh), vR(_vR), Delta0(_Delta), pot(_pot){
-			P0=pot->value(coord::PosCyl(Rsh,0,0));
-			EmP0=E-P0;
-		}
-		math::Matrix<double> derivs(double u,double Delta,double* p2=NULL,double* p2prime=NULL);
-		double bestFD(double&);
-};
-
-math::Matrix<double> FDfinder::derivs(double u,double Delta,double* p2,double* p2prime){
-	double sh=sinh(u), ch=cosh(u), u0=asinh(Rsh/Delta);
-	double R=Delta*sh, R2=R*R, Delta2=pow_2(Delta);
-	double P;
-	coord::GradCyl gradP;
-	coord::HessCyl hessP;
-	pot->eval(coord::PosCyl(R,0,0),&P,&gradP,&hessP);
-	double EmP=E-P;
-	double X=2*(EmP*R2-Delta2*P);
-	double dXdR=4*EmP*R-2*(R2+Delta2)*gradP.dR;
-	double dXdDelta=-4*Delta*P;
-	double d2XdR2=4*EmP-8*R*gradP.dR-2*(R2+Delta2)*hessP.dR2;
-	double d2XdDeltadR=-4*Delta*gradP.dR;
-	double pu0=Delta*cosh(u0)*vR;
-	if(p2!=NULL) *p2=pow_2(pu0)+X-2*(EmP0*pow_2(Rsh)-Delta2*P0);
-	double dp2du=dXdR*Delta*ch;
-	if(p2prime!=NULL) *p2prime=dp2du;
-	double dp2dDelta=2*pu0*vR/cosh(u0) + dXdR*sh + dXdDelta + 4*Delta*P0;
-	double dp2primedu=d2XdR2*pow_2(Delta*ch)+dXdR*Delta*sh;
-	double dp2primedDelta=d2XdR2*Delta*ch*sh+dXdR*ch+d2XdDeltadR*Delta*ch;
-	math::Matrix<double> M(2,2);
-	M(0,0)=dp2du;      M(0,1)=dp2dDelta;
-	M(1,0)=dp2primedu; M(1,1)=dp2primedDelta;
-	return M;
-}
-
-double FDfinder::bestFD(double &umin){//implements N-R search for p_u^2=dp_u^2/du=0
-	double u=asinh(.8*Rsh/Delta0), u0=asinh(Rsh/Delta0), pu0=vR*Delta0*cosh(u0);
-	double p2,p2prime,Delta=Delta0,fac=1;
-	for(int i=0;i<8;i++){
-		math::Matrix<double> M0(derivs(u,Delta,&p2,&p2prime));
-		double det=M0(0,0)*M0(1,1)-M0(1,0)*M0(0,1);
-		double dY0 = ( M0(1,1)*p2-M0(0,1)*p2prime)/det;
-		double dY1 = (-M0(1,0)*p2+M0(0,0)*p2prime)/det;
-		while(fabs(dY0)>.5*u){
-			dY0*=.5; dY1*=.5;
-		}
-		while(fabs(dY1)>.5*Delta){
-			dY0*=.5; dY1*=.5;
-		}
-		u-=dY0; Delta-=dY1;
-	}
-	umin=u;
-	return Delta;
-}	
-
 // -------- COMMON routines for Staeckel and Fudge action finders --------
 /** parameters for the function that computes actions and angles
     by integrating an auxiliary function "fnc" as follows:
@@ -356,7 +208,7 @@ class AxisymIntegrand: public math::IFunctionNoDeriv {
 			if(c==cminus1)
 				result /= tau;
 			if(!isFinite(result))
-				result=0;  // ad hoc fix to avoid problems at the boundaries of integration interval
+				result=1;  // ad hoc fix to avoid problems at the boundaries of integration interval
 			return result;
 		}
 
@@ -709,6 +561,48 @@ ActionAngles computeActionAngles(
 
 // -------- THE DRIVER ROUTINES --------
 
+/** auxiliary function that enters the definition of canonical momentum for 
+    for the Staeckel potential: it is the numerator of eq.50 in de Zeeuw(1985);
+    except that in our convention `tau` >= 0 is equivalent to `tau+gamma` from that paper. */
+EXP void AxisymFunctionStaeckel::evalDeriv(const double tau, 
+				       double* val, double* der, double* der2) const
+{
+	assert(tau>=0);
+	double G, dG, d2G;
+	fncG.evalDeriv(tau, &G, der || der2 ? &dG : NULL, der2 ? &d2G : NULL);
+	const double tauminusdelta = tau - point.coordsys.Delta2;
+	if(val)
+		*val = ( (E + G) * tau - I3 ) * tauminusdelta - Lz*Lz/2 * tau;
+	if(der)
+		*der = (E + G) * (tau + tauminusdelta) + dG * tau * tauminusdelta - I3 - Lz*Lz/2;
+	if(der2)
+		*der2 = 2 * (E + G) + 2 * dG * (tau + tauminusdelta) + d2G * tau * tauminusdelta;
+}
+
+/** compute integrals of motion in the Staeckel potential of an oblate perfect ellipsoid, 
+    together with the coordinates in its prolate spheroidal coordinate system 
+*/
+   EXP AxisymFunctionStaeckel findIntegralsOfMotionOblatePerfectEllipsoid(
+	const potential::OblatePerfectEllipsoid& potential, 
+	const coord::PosVelCyl& point)
+{
+	double E = totalEnergy(potential, point);
+	double Lz= coord::Lz(point);
+	const coord::ProlSph& coordsys = potential.coordsys();
+	const coord::PosVelProlSph pprol = coord::toPosVel<coord::Cyl, coord::ProlSph>(point, coordsys);
+	double Glambda;
+	potential.evalDeriv(pprol.lambda, &Glambda);
+	double I3;
+	if(point.z==0)   // special case: nu=0
+		I3 = 0.5 * pow_2(point.vz) * (pow_2(point.R) + coordsys.Delta2);
+	else   // general case: eq.3 in Sanders(2012)
+		I3 = fmax(0,
+			  pprol.lambda * (E - pow_2(Lz) / 2 / (pprol.lambda - coordsys.Delta2) + Glambda) -
+			  pow_2( pprol.lambdadot * (pprol.lambda - fabs(pprol.nu)) ) / 
+			  (8 * (pprol.lambda - coordsys.Delta2) * pprol.lambda) );
+	return AxisymFunctionStaeckel(pprol, E, Lz, I3, potential);
+}
+
 EXP Actions actionsAxisymStaeckel(const potential::OblatePerfectEllipsoid& potential,
     const coord::PosVelCyl& point)
 {
@@ -822,7 +716,7 @@ EXP ActionFinderAxisymFudge::ActionFinderAxisymFudge(
     invPhi0(1./_pot->value(coord::PosCyl(0,0,0))), pot(_pot), interp(*pot)
 {
 	// construct a grid in radius with unequal spacing depending on the variation of the potential
-    std::vector<double> gridR = potential::createInterpolationGrid(*pot, ACCURACY_INTERP2);
+	std::vector<double> gridR = potential::createInterpolationGrid(*pot, ACCURACY_INTERP2);
 
     const int sizeE = gridR.size();
     const int sizeL = 25;
@@ -1117,5 +1011,55 @@ EXP double ActionFinderAxisymFudge::focalDistance(const coord::PosVelCyl& point)
     double chi   = math::scale(math::ScalingCub(0, 1), Lzrel);
     return fmax(0, interpD.value(xi, chi));
 }
+
+EXP math::Matrix<double> FDfinder::derivs(double u,double Delta,double* p2,double* p2prime){
+	double sh=sinh(u), ch=cosh(u), u0=asinh(Rsh/Delta);
+	double R=Delta*sh, R2=R*R, Delta2=pow_2(Delta);
+	double P;
+	coord::GradCyl gradP;
+	coord::HessCyl hessP;
+	pot->eval(coord::PosCyl(R,0,0),&P,&gradP,&hessP);
+	double EmP=E-P;
+	double X=2*(EmP*R2-Delta2*P);
+	double dXdR=4*EmP*R-2*(R2+Delta2)*gradP.dR;
+	double dXdDelta=-4*Delta*P;
+	double d2XdR2=4*EmP-8*R*gradP.dR-2*(R2+Delta2)*hessP.dR2;
+	double d2XdDeltadR=-4*Delta*gradP.dR;
+	double pu0=Delta*cosh(u0)*vR;
+	if(p2!=NULL) *p2=pow_2(pu0)+X-2*(EmP0*pow_2(Rsh)-Delta2*P0);
+	double dp2du=dXdR*Delta*ch;
+	if(p2prime!=NULL) *p2prime=dp2du;
+	double dp2dDelta=2*pu0*vR/cosh(u0) + dXdR*sh + dXdDelta + 4*Delta*P0;
+	double dp2primedu=d2XdR2*pow_2(Delta*ch)+dXdR*Delta*sh;
+	double dp2primedDelta=d2XdR2*Delta*ch*sh+dXdR*ch+d2XdDeltadR*Delta*ch;
+	math::Matrix<double> M(2,2);
+	M(0,0)=dp2du;      M(0,1)=dp2dDelta;
+	M(1,0)=dp2primedu; M(1,1)=dp2primedDelta;
+	return M;
+}
+
+EXP double FDfinder::bestFD(double &umin){//implements N-R search for p_u^2=dp_u^2/du=0
+	double u=asinh(.8*Rsh/Delta0), u0=asinh(Rsh/Delta0), pu0=vR*Delta0*cosh(u0);
+	double p2=1, p2prime=1, Delta=Delta0, fac=1;
+	int i=0;
+	while(i<20 && (fabs(p2)>1e-4 || fabs(p2prime)>1e-4)){
+		math::Matrix<double> M0(derivs(u,Delta,&p2,&p2prime));
+		double det=M0(0,0)*M0(1,1)-M0(1,0)*M0(0,1);
+		double dY0 = ( M0(1,1)*p2-M0(0,1)*p2prime)/det;
+		double dY1 = (-M0(1,0)*p2+M0(0,0)*p2prime)/det;
+		while(fabs(dY0)>.5*u){
+			dY0*=.5; dY1*=.5;
+		}
+		while(fabs(dY1)>.5*Delta){
+			dY0*=.5; dY1*=.5;
+		}
+		u-=dY0; Delta-=dY1;
+		i++;
+	}
+//	printf("bestFD %f %f\n",p2,p2prime);
+	umin=u;
+	return Delta;
+}	
+
 
 }  // namespace actions

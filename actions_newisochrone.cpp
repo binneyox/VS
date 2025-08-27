@@ -17,8 +17,9 @@ inline double catanx(double a,double eta,double ax,double etax){//derivative of 
 
 class Is_Horse {
 	private:
-		double Js,b;
-		double Js2,Js4,b2,c,H,Omegar,Omegaphi,Jr,Jz,Jphi,thetar,thetaz,thetaphi,L,Ls,frat;
+		const double Js,b;
+		const double Js2,Js4,b2;
+		double c,H,Omegar,Omegaphi,Jr,Jz,Jphi,thetar,thetaz,thetaphi,L,Ls,frat;
 		double a,ap,boc,u,e,sini,cosi,eta,cseta,sneta,snheta,csheta,tnheta,psi,snpsi,cspsi;
 		double r,th,pr,pth,csth,snth;  int signJphi;
 		void derivs1(double* dlncdJ, double* dedJ, double* detadJ,
@@ -90,7 +91,7 @@ void Is_Horse::derivs2(double* dlncdJ, double* dedJ, double* detadJ,
 	dpthdJ[1]= -cspsi/(snth*sini)
 		   +L*sini*(snpsi*dpsidJ[1]/snth+cspsi*csth*dthdJ[1]/pow_2(snth));
 	if(std::isnan(dpthdJ[0])){
-		printf("TM error %f %f %f %f %f %f %f %f\n",pth,L,Jphi,tnpsi,dpsidJ[1],csth,snth,dthdJ[1]);
+		printf("TM error %f %f %f %f %f %f %f %f\n",pth,L,snpsi,cspsi,dpsidJ[1],csth,snth,dthdJ[1]);
 		exit(0);
 	}
 	dpthdJ[2] = -(1-Jphi/L)*cspsi/(snth*sini)

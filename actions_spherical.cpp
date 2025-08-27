@@ -25,7 +25,7 @@ static const double ACCURACY_INTERP2 = 1e-4;
 static const unsigned int GRID_SIZE_L = 25;
 
 /// minimum order of Gauss-Legendre quadrature for actions, frequencies and angles
-static const unsigned int INTEGR_ORDER = 10;
+static const unsigned int INTEGR_ORDER = 20;
 
 /** order of Gauss-Legendre quadrature for actions, frequencies and angles:
     use a higher order for more eccentric orbits, as indicated by the ratio

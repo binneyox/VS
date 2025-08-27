@@ -3,22 +3,74 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
 #include <pybind11/stl.h>
+#include "/u/c/agama/agama/actions_base.h"
 #include "/u/c/agama/agama/actions_newtorus.h"
 #include "/u/c/agama/agama/actions_staeckel.h"
 #include "/u/c/agama/agama/potential_factory.h"
+//#include "/u/c/agama/Tom/agamanew/potential_factory.h"
+#include "/u/c/agama/agama/potential_composite.h"
+#include "/u/c/agama/agama/potential_cylspline.h"
+#include "/u/c/agama/agama/potential_multipole.h"
+#include "/u/c/agama/agama/potential_analytic.h"
+#include "/u/c/agama/agama/particles_io.h"
+#include "/u/c/agama/agama/math_spline.h"
 #include "/u/c/agama/agama/orbit.h"
 #include "/u/c/agama/agama/coord.h"
 #include "/u/c/agama/agama/obs_base.h"
 #include "/u/c/agama/agama/units.h"
+#include "/u/c/agama/agama/utils.h"
+#include "/u/c/agama/agama/utils_config.h"
+#include "/u/c/agama/agama/df_base.h"
+#include "/u/c/agama/agama/df_factory.h"
+#include "/u/c/agama/agama/df_spherical.h"
+#include "/u/c/agama/agama/df_halo.h"
+#include "/u/c/agama/agama/galaxymodel_base.h"
+#include "/u/c/agama/agama/galaxymodel_selfconsistent.h"
+#include "/u/c/agama/agama/galaxymodel_velocitysampler.h"
 namespace py = pybind11;
 using namespace pybind11::literals;
 #define EXP __declspec(dllexport)
-
-potential::PtrPotential makepot(const std::string& vals) {
-    return potential::PtrPotential(potential::createPotential(utils::KeyValueMap(vals)));
-}
-
 PYBIND11_MODULE(Py_agama, m) {
+    using Bspl13=math::BsplineInterpolator1d<3>;
+    py::class_<Bspl13>(m,"BsplineInterpolator1d3")
+        .def(py::init<const std::vector<double>&>())
+        .def("integrate",&Bspl13::integrate)
+        .def("interpolate",&Bspl13::interpolate)
+        .def("antideriv",&Bspl13::antideriv)
+        .def("xmax",&Bspl13::xmax)
+        .def("xmin",&Bspl13::xmin)
+        .def("xvalues",&Bspl13::xvalues)
+        .def("deriv",&Bspl13::deriv)
+        .def("numValues",&Bspl13::numValues)
+        .def("numVars",&Bspl13::numVars);
+    py::class_<utils::KeyValueMap>(m,"KeyValueMap")
+        .def(py::init<>())
+        .def(py::init<const std::string &,const std::string &>(),"params"_a,"whitespace"_a=", ")
+        .def("add",&utils::KeyValueMap::add)
+        .def("contains",&utils::KeyValueMap::contains)
+        .def("dump",&utils::KeyValueMap::dump)
+        .def("dumpSingleLine",&utils::KeyValueMap::dumpSingleLine)
+        .def("getBool",&utils::KeyValueMap::getBool,"key"_a,"defaultValue"_a=false)
+        .def("getDouble",&utils::KeyValueMap::getDouble,"key"_a,"defaultValue"_a=0.0)
+        .def("getDoubleAlt",&utils::KeyValueMap::getDoubleAlt,"key1"_a,"key2"_a,"defaultValue"_a=0.0)
+        .def("getDoubleVector",&utils::KeyValueMap::getDoubleVector)
+        .def("getInt",&utils::KeyValueMap::getInt,"key"_a,"defaultValue"_a=0)
+        .def("getIntAlt",&utils::KeyValueMap::getIntAlt,"key1"_a,"key2"_a,"defaultValue"_a=0)
+        .def("getString",&utils::KeyValueMap::getString,"key"_a,"defaultValue"_a="")
+        .def("getStringAlt",&utils::KeyValueMap::getStringAlt,"key1"_a,"key2"_a,"defaultValye"_a="")
+        .def("isModified",&utils::KeyValueMap::isModified)
+        .def("keys",&utils::KeyValueMap::keys)
+        .def("set",[](utils::KeyValueMap &self,const std::string &key,const bool value){return self.set(key,value);})
+        .def("set",[](utils::KeyValueMap &self,const std::string &key,const unsigned int value){return self.set(key,value);})
+        .def("set",[](utils::KeyValueMap &self,const std::string &key,const int value){return self.set(key,value);})
+        .def("set",[](utils::KeyValueMap &self,const std::string &key,const char* value){return self.set(key,value);})
+        .def("set",[](utils::KeyValueMap &self,const std::string &key,const std::string &value){return self.set(key,value);})
+        .def("set",[](utils::KeyValueMap &self,const std::string &key,const double value){return self.set(key,value);})
+        .def("unset",&utils::KeyValueMap::unset);
+    py::class_<utils::ConfigFile>(m,"ConfigFile")
+        .def(py::init<const std::string &,bool>(),"fileName"_a,"mustExist"_a=true)
+        .def("findSection",&utils::ConfigFile::findSection)
+        .def("listSections",[](utils::ConfigFile &self){return self.listSections();});
     py::class_<units::InternalUnits>(m,"IntUnits")
         .def(py::init<double, double>())
         .def_readonly("from_Gev_per_cm3", &units::InternalUnits::from_Gev_per_cm3)
@@ -54,6 +106,10 @@ PYBIND11_MODULE(Py_agama, m) {
         .def_readonly("to_Kpc", &units::InternalUnits::to_Kpc)
         .def_readonly("to_yr", &units::InternalUnits::to_yr)
         .def_readonly("to_Myr", &units::InternalUnits::to_Myr);
+    m.attr("Kpc")=units::Kpc;
+    m.attr("Myr")=units::Myr;
+    m.attr("Msun")=units::Msun;
+    m.attr("kms")=units::kms;
     m.attr("galactic_kms") = units::galactic_kms;
     m.attr("galactic_Myr") = units::galactic_Myr;
     py::class_<units::ExternalUnits>(m,"ExtUnits")
@@ -194,6 +250,31 @@ PYBIND11_MODULE(Py_agama, m) {
         .def_readwrite("pos", &obs::PosVelSky::pos)
         .def_readwrite("is_ra", &obs::PosVelSky::is_ra);
     
+    py::class_<coord::Vel2Cyl>(m,"Vel2Cyl")
+        .def(py::init<>())
+        .def_readwrite("vphi2",&coord::Vel2Cyl::vphi2)
+        .def_readwrite("vR2",&coord::Vel2Cyl::vR2)
+        .def_readwrite("vz2",&coord::Vel2Cyl::vz2)
+        .def_readwrite("vRvphi",&coord::Vel2Cyl::vRvphi)
+        .def_readwrite("vRvz",&coord::Vel2Cyl::vRvz)
+        .def_readwrite("vzvphi",&coord::Vel2Cyl::vzvphi);
+    py::class_<coord::Vel2Car>(m,"Vel2Car")
+        .def(py::init<>())
+        .def_readwrite("vx2",&coord::Vel2Car::vx2)
+        .def_readwrite("vy2",&coord::Vel2Car::vy2)
+        .def_readwrite("vz2",&coord::Vel2Car::vz2)
+        .def_readwrite("vxvy",&coord::Vel2Car::vxvy)
+        .def_readwrite("vxvz",&coord::Vel2Car::vxvz)
+        .def_readwrite("vyvz",&coord::Vel2Car::vyvz);
+    py::class_<coord::Vel2Sph>(m,"Vel2Sph")
+        .def(py::init<>())
+        .def_readwrite("vphi2",&coord::Vel2Sph::vphi2)
+        .def_readwrite("vr2",&coord::Vel2Sph::vr2)
+        .def_readwrite("vtheta2",&coord::Vel2Sph::vtheta2)
+        .def_readwrite("vrvtheta",&coord::Vel2Sph::vrvtheta)
+        .def_readwrite("vrvphi",&coord::Vel2Sph::vrvphi)
+        .def_readwrite("vthetavphi",&coord::Vel2Sph::vthetavphi);
+
     py::class_<obs::solarShifter>ss (m,"solarShifter");
     ss.def(py::init([](const units::InternalUnits &intUnits, coord::PosVelCar Vsun=coord::PosVelCar(NAN,NAN,NAN,NAN,NAN,NAN))
         { 
@@ -227,11 +308,21 @@ PYBIND11_MODULE(Py_agama, m) {
     ss.def_readonly("from_kms", &obs::solarShifter::from_kms);
     ss.def_readonly("from_mas_per_yr", &obs::solarShifter::from_mas_per_yr);
     ss.def_readonly("torad", &obs::solarShifter::torad);
-    
+    py::class_<potential::BaseDensity,std::shared_ptr<potential::BaseDensity>>(m,"BaseDensity")
+        .def("enclosedMass",&potential::BaseDensity::enclosedMass)
+        .def("name",&potential::BaseDensity::name)
+        .def("totalMass",&potential::BaseDensity::totalMass)
+        .def("density",[](potential::BaseDensity &self,coord::PosCar pos){return self.density(pos);})
+        .def("density",[](potential::BaseDensity &self,coord::PosCyl pos){return self.density(pos);})
+        .def("density",[](potential::BaseDensity &self,coord::PosSph pos){return self.density(pos);});
     py::class_<potential::BasePotential,std::shared_ptr<potential::BasePotential>>(m, "BasePotential")
+        .def("totalMass",&potential::BasePotential::totalMass)
+        .def("enclosedMass",&potential::BasePotential::enclosedMass)
+        .def("name",&potential::BasePotential::name)
         .def("value",&potential::BasePotential::value<coord::Car>)
         .def("value",&potential::BasePotential::value<coord::Cyl>)
-        .def("eval",[](potential::BasePotential &self, coord::PosCar x,bool pot=false,bool der=false,bool hess=false)-> std::variant<double,py::list,coord::GradCar,coord::HessCar>{
+        .def("eval",[](potential::BasePotential &self, coord::PosCar x,bool pot=false,bool der=false,bool hess=false)
+        -> std::variant<double,py::list,coord::GradCar,coord::HessCar>{
             if(!pot&!der&&!hess)pot=true;
             double pot0;
             coord::GradCar ders;
@@ -283,6 +374,26 @@ PYBIND11_MODULE(Py_agama, m) {
             if(hess) return hess1;
             return pot0;
         },"x"_a,"pot"_a=false,"der"_a=false,"hess"_a=false);
+    py::class_<potential::BasePotentialCyl,std::shared_ptr<potential::BasePotentialCyl>>(m, "BasePotentialCyl")
+        .def("value",&potential::BasePotentialCyl::value<coord::Cyl>)
+        .def("eval",[](potential::BasePotentialCyl &self, coord::PosCyl x,bool pot=false,bool der=false,bool hess=false)
+        -> std::variant<double,py::list,coord::GradCyl,coord::HessCyl>{
+            if(!pot&!der&&!hess)pot=true;
+            double pot0;
+            coord::GradCyl ders;
+            coord::HessCyl hess1;
+            self.eval(x,pot?&pot0:NULL,der?&ders:NULL,hess?&hess1:NULL);
+            if(pot&&der||pot&&hess||der&&hess){
+                py::list ls2;
+                if(pot)ls2.append(pot0);
+                if(der)ls2.append(ders);
+                if(hess)ls2.append(hess1);
+                return ls2;
+            }
+            if(der) return ders;
+            if(hess) return hess1;
+            return pot0;
+        },"x"_a,"pot"_a=false,"der"_a=false,"hess"_a=false);
     py::class_<actions::Actions>(m,"Actions")
         .def(py::init<double,double,double>())
         .def_readwrite("Jr", &actions::Actions::Jr)
@@ -316,7 +427,31 @@ PYBIND11_MODULE(Py_agama, m) {
 		    .def("Omega",&actions::Torus::Omega)
 		    .def("density",&actions::Torus::density)
 		    .def("orbit",&actions::Torus::orbit);
-    py::class_<actions::ActionFinderAxisymFudge>(m,"ActionFinderAxisymFudge")
+    py::class_<actions::BaseActionFinder,std::shared_ptr<actions::BaseActionFinder>>(m,"BaseActionFinder")
+        .def("actionAngles",[] (actions::BaseActionFinder &self, coord::PosVelCyl xv,bool freq=false)
+        -> std::variant<actions::ActionAngles,py::list> 
+        { 
+            if(!freq)return self.actionAngles(xv);
+            actions::Frequencies freqs;
+            py::list ls;
+            ls.append(self.actionAngles(xv,&freqs));
+            ls.append(freqs);
+            return ls;
+        },"xv"_a,"freq"_a=false )
+        .def("actions",&actions::BaseActionFinder::actions);
+     py::class_<actions::ActionFinderSpherical,std::shared_ptr<actions::ActionFinderSpherical>,actions::BaseActionFinder>(m,"ActionFinderSpherical")
+        .def("actionAngles",[] (actions::ActionFinderSpherical &self, coord::PosVelCyl xv,bool freq=false)
+        -> std::variant<actions::ActionAngles,py::list> 
+        { 
+            if(!freq)return self.actionAngles(xv);
+            actions::Frequencies freqs;
+            py::list ls;
+            ls.append(self.actionAngles(xv,&freqs));
+            ls.append(freqs);
+            return ls;
+        },"xv"_a,"freq"_a=false )
+        .def("actions",&actions::ActionFinderSpherical::actions);
+    py::class_<actions::ActionFinderAxisymFudge,std::shared_ptr<actions::ActionFinderAxisymFudge>,actions::BaseActionFinder>(m,"ActionFinderAxisymFudge")
 		    .def(py::init<const potential::PtrPotential&,bool>(),"potential"_a,"interpolate"_a=false)
         .def("actionAngles",[] (actions::ActionFinderAxisymFudge &self, coord::PosVelCyl xv,bool freq=false)
         -> std::variant<actions::ActionAngles,py::list> 
@@ -329,8 +464,8 @@ PYBIND11_MODULE(Py_agama, m) {
             return ls;
         },"xv"_a,"freq"_a=false)
         .def("actions",&actions::ActionFinderAxisymFudge::actions);
-    py::class_<actions::ActionFinderTG>(m,"ActionFinderTG")
-	.def(py::init<const potential::PtrPotential&,
+    py::class_<actions::ActionFinderTG,std::shared_ptr<actions::ActionFinderTG>,actions::BaseActionFinder>(m,"ActionFinderTG")
+	    .def(py::init<const potential::PtrPotential&,
 			 const actions::TorusGenerator&>())
         .def("actionAngles",[] (actions::ActionFinderTG &self, coord::PosVelCyl xv,bool freq=false)
         -> std::variant<actions::ActionAngles,py::list> 
@@ -343,9 +478,174 @@ PYBIND11_MODULE(Py_agama, m) {
             return ls;
         },"xv"_a,"freq"_a=false )
         .def("actions",&actions::ActionFinderTG::actions);
+    py::class_<potential::CompositeDensity,std::shared_ptr<potential::CompositeDensity>,potential::BaseDensity>(m,"CompositeDensity")
+        .def(py::init<const std::vector<potential::PtrDensity>&>())
+        .def("enclosedMass",&potential::BaseDensity::enclosedMass)
+        .def("name",&potential::BaseDensity::name)
+        .def("totalMass",&potential::BaseDensity::totalMass)
+        .def("density",[](potential::BaseDensity &self,coord::PosCar pos){return self.density(pos);})
+        .def("density",[](potential::BaseDensity &self,coord::PosCyl pos){return self.density(pos);})
+        .def("density",[](potential::BaseDensity &self,coord::PosSph pos){return self.density(pos);})
+        .def("component",&potential::CompositeDensity::component);
+    py::class_<potential::Multipole,std::shared_ptr<potential::Multipole>,potential::BasePotential>(m,"Multipole")
+        .def(py::init<std::vector<double>&,std::vector<std::vector<double>>&,std::vector<std::vector<double>>&>())
+        .def("density",[](potential::Multipole &self,coord::PosCar pos){return self.density(pos);})
+        .def("density",[](potential::Multipole &self,coord::PosCyl pos){return self.density(pos);})
+        .def("density",[](potential::Multipole &self,coord::PosSph pos){return self.density(pos);})
+        .def("enclosedMass",&potential::Multipole::enclosedMass)
+        .def("name",&potential::Multipole::name)
+        .def("totalMass",&potential::Multipole::totalMass);
+    py::class_<potential::CylSpline,std::shared_ptr<potential::CylSpline>,potential::BasePotential>(m,"CylSpline");
+    py::class_<df::BaseDistributionFunction,std::shared_ptr<df::BaseDistributionFunction>>(m,"BaseDistributionFunction")
+        .def("value",&df::BaseDistributionFunction::value)
+        .def("numValues",&df::BaseDistributionFunction::numValues)
+        .def("LF",&df::BaseDistributionFunction::LF)
+        .def("readBrighterThan",&df::BaseDistributionFunction::readBrighterThan)
+        .def("setNorm",&df::BaseDistributionFunction::set_norm)
+        .def("selectMag",&df::BaseDistributionFunction::selectMag)
+        .def("totalMass",[](df::BaseDistributionFunction &self,double reqRelError=1e-6,int MaxNumEval=1000000)
+        {return self.totalMass(reqRelError,MaxNumEval);},"reqRelError"_a=1e-6,"MaxNumEval"_a=1000000)
+        .def("epicycle_ratios",[](df::BaseDistributionFunction &self,const actions::Actions J){
+            double r;
+            self.epicycle_ratios(J,&r);
+            return r;
+        })
+        .def("eval",[](df::BaseDistributionFunction &self,const actions::Actions J){
+            int n=self.numValues();
+            std::vector<double> vals(n);
+            self.eval(J,&vals[0]);
+            return vals;
+        })
+        .def("tab_params",[](df::BaseDistributionFunction &self,std::string filename,const units::InternalUnits &units){
+            std::ofstream os(filename);
+            self.tab_params(os,units);
+        })
+        .def("write_params",[](df::BaseDistributionFunction &self,std::string filename,const units::InternalUnits &units){
+            std::ofstream os(filename);
+            self.write_params(os,units);
+        });
+    py::class_<df::CompositeDF,std::shared_ptr<df::CompositeDF>,df::BaseDistributionFunction>(m,"CompositeDF")
+        .def(py::init<const std::vector<df::PtrDistributionFunction>>())
+        .def("component",&df::CompositeDF::component);
+    py::class_<df::DoublePowerLawParam>(m,"DoublePowerLawParam")
+        .def(py::init<>())
+        .def_readwrite("coefJrIn",&df::DoublePowerLawParam::coefJrIn)
+        .def_readwrite("coefJrOut",&df::DoublePowerLawParam::coefJrOut)
+        .def_readwrite("coefJzIn",&df::DoublePowerLawParam::coefJzIn)
+        .def_readwrite("coefJzOut",&df::DoublePowerLawParam::coefJzOut)
+        .def_readwrite("cutoffStrength",&df::DoublePowerLawParam::cutoffStrength)
+        .def_readwrite("Fname",&df::DoublePowerLawParam::Fname)
+        .def_readwrite("J0",&df::DoublePowerLawParam::J0)
+        .def_readwrite("Jcore",&df::DoublePowerLawParam::Jcore)
+        .def_readwrite("Jcutoff",&df::DoublePowerLawParam::Jcutoff)
+        .def_readwrite("Jphi0",&df::DoublePowerLawParam::Jphi0)
+        .def_readwrite("norm",&df::DoublePowerLawParam::norm)
+        .def_readwrite("rotFrac",&df::DoublePowerLawParam::rotFrac)
+        .def_readwrite("slopeIn",&df::DoublePowerLawParam::slopeIn)
+        .def_readwrite("slopeOut",&df::DoublePowerLawParam::slopeOut)
+        .def_readwrite("steepness",&df::DoublePowerLawParam::steepness);
+    py::class_<df::DoublePowerLaw,std::shared_ptr<df::DoublePowerLaw>,df::BaseDistributionFunction>(m,"DoublePowerLawDF")
+        .def(py::init<df::DoublePowerLawParam>());
+    py::class_<df::IsochroneParam>(m,"IsochroneParam")
+        .def(py::init<>())
+        .def_readwrite("scaleRadius",&df::IsochroneParam::scaleRadius)
+        .def_readwrite("mass",&df::IsochroneParam::mass)
+        .def_readwrite("nu",&df::IsochroneParam::nu)
+        .def_readwrite("mu",&df::IsochroneParam::mu);
+    py::class_<df::IsochroneDF,std::shared_ptr<df::IsochroneDF>,df::BaseDistributionFunction>(m,"IsochroneDF")
+        .def(py::init<df::IsochroneParam>());
+    py::class_<particles::ParticleArrayCar>(m,"ParticleArrayCar")
+        .def(py::init<>())
+        .def("add",&particles::ParticleArrayCar::add)
+        .def("mass",&particles::ParticleArrayCar::mass)
+        .def("point",&particles::ParticleArrayCar::point)
+        .def("totalMass",&particles::ParticleArrayCar::totalMass)
+        .def("size",&particles::ParticleArrayCar::size);
+    py::class_<particles::ParticleArrayCyl>(m,"ParticleArrayCyl")
+        .def(py::init<>())
+        .def("add",&particles::ParticleArrayCyl::add)
+        .def("mass",&particles::ParticleArrayCyl::mass)
+        .def("point",&particles::ParticleArrayCyl::point)
+        .def("totalMass",&particles::ParticleArrayCyl::totalMass)
+        .def("size",&particles::ParticleArrayCyl::size);
+    py::class_<particles::ParticleArraySph>(m,"ParticleArraySph")
+        .def(py::init<>())
+        .def("add",&particles::ParticleArraySph::add)
+        .def("mass",&particles::ParticleArraySph::mass)
+        .def("point",&particles::ParticleArraySph::point)
+        .def("totalMass",&particles::ParticleArraySph::totalMass)
+        .def("size",&particles::ParticleArraySph::size);
+    py::class_<particles::ParticleArray<coord::PosCyl>>(m,"ParticleArrayPosCyl")
+        .def(py::init<>())
+        .def("add",&particles::ParticleArray<coord::PosCyl>::add)
+        .def("mass",&particles::ParticleArray<coord::PosCyl>::mass)
+        .def("point",&particles::ParticleArray<coord::PosCyl>::point)
+        .def("totalMass",&particles::ParticleArray<coord::PosCyl>::totalMass)
+        .def("size",&particles::ParticleArray<coord::PosCyl>::size);
+    py::class_<particles::ParticleArray<coord::PosCar>>(m,"ParticleArrayPosCar")
+        .def(py::init<>())
+        .def("add",&particles::ParticleArray<coord::PosCar>::add)
+        .def("mass",&particles::ParticleArray<coord::PosCar>::mass)
+        .def("point",&particles::ParticleArray<coord::PosCar>::point)
+        .def("totalMass",&particles::ParticleArray<coord::PosCar>::totalMass)
+        .def("size",&particles::ParticleArray<coord::PosCar>::size);
+    py::class_<particles::ParticleArray<coord::PosSph>>(m,"ParticleArrayPosSph")
+        .def(py::init<>())
+        .def("add",&particles::ParticleArray<coord::PosSph>::add)
+        .def("mass",&particles::ParticleArray<coord::PosSph>::mass)
+        .def("point",&particles::ParticleArray<coord::PosSph>::point)
+        .def("totalMass",&particles::ParticleArray<coord::PosSph>::totalMass)
+        .def("size",&particles::ParticleArray<coord::PosSph>::size);
+    py::class_<galaxymodel::BaseComponent,std::shared_ptr<galaxymodel::BaseComponent>>(m,"BaseComponent")
+        .def("getPotential",&galaxymodel::BaseComponent::getPotential)
+        .def("getDensity",&galaxymodel::BaseComponent::getDensity)
+        .def("update",&galaxymodel::BaseComponent::update)
+        .def_readonly("isDensityDisklike",&galaxymodel::BaseComponent::isDensityDisklike);
+    py::class_<galaxymodel::ComponentStatic,std::shared_ptr<galaxymodel::ComponentStatic>,galaxymodel::BaseComponent>(m,"ComponentStatic")
+        .def(py::init<const potential::PtrPotential&>())
+        .def(py::init<const potential::PtrDensity&,bool>());
+    py::class_<galaxymodel::ComponentWithSpheroidalDF,std::shared_ptr<galaxymodel::ComponentWithSpheroidalDF>,galaxymodel::BaseComponent>(m,"ComponentWithSpheroidalDF")
+        .def(py::init<const df::PtrDistributionFunction &,const potential::PtrDensity &,unsigned int,unsigned int,
+            unsigned int,double,double,double,unsigned int>(),"df"_a,"initDensity"_a,"lmax"_a,"mmax"_a,"gridSizeR"_a,
+            "rmin"_a,"rmax"_a,"relError"_a=(0.001),"maxNumEval"_a=100000U);
+     py::class_<galaxymodel::ComponentWithDisklikeDF,std::shared_ptr<galaxymodel::ComponentWithDisklikeDF>,galaxymodel::BaseComponent>(m,"ComponentWithDisklikeDF")
+        .def(py::init<const df::PtrDistributionFunction &,const potential::PtrDensity &,unsigned int,unsigned int,double,double,unsigned int,
+           double,double,double,unsigned int>(),"df"_a,"initDensity"_a,"mmax"_a,"gridSizeR"_a,
+            "rmin"_a,"rmax"_a,"gridSizez"_a,"zmin"_a,"zmax"_a,"relError"_a=(0.001),"maxNumEval"_a=100000U);
+    py::class_<galaxymodel::GalaxyModel>(m,"GalaxyModel")
+        .def(py::init<potential::BasePotential &, actions::BaseActionFinder &,df::BaseDistributionFunction &>())
+        .def("potential",[](galaxymodel::GalaxyModel &self){return &self.potential;})
+        .def("actFinder",[](galaxymodel::GalaxyModel &self){return &self.actFinder;})
+        .def("distrFunc",[](galaxymodel::GalaxyModel &self){return &self.distrFunc;});
+    py::class_<galaxymodel::SelfConsistentModel>(m,"SelfConsistentModel")
+        .def(py::init<>())
+        .def_readwrite("actionFinder",&galaxymodel::SelfConsistentModel::actionFinder)
+        .def_readwrite("components",&galaxymodel::SelfConsistentModel::components)
+        .def_readwrite("rminSph",&galaxymodel::SelfConsistentModel::rminSph)
+        .def_readwrite("rmaxSph",&galaxymodel::SelfConsistentModel::rmaxSph)
+        .def_readwrite("RminCyl",&galaxymodel::SelfConsistentModel::RminCyl)
+        .def_readwrite("RmaxCyl",&galaxymodel::SelfConsistentModel::RmaxCyl)
+        .def_readwrite("lmaxAngularSph",&galaxymodel::SelfConsistentModel::lmaxAngularSph)
+        .def_readwrite("mmaxAngularSph",&galaxymodel::SelfConsistentModel::mmaxAngularSph)
+        .def_readwrite("mmaxAngularCyl",&galaxymodel::SelfConsistentModel::mmaxAngularCyl)
+        .def_readwrite("zmaxCyl",&galaxymodel::SelfConsistentModel::zmaxCyl)
+        .def_readwrite("zminCyl",&galaxymodel::SelfConsistentModel::zminCyl)
+        .def_readwrite("sizeRadialCyl",&galaxymodel::SelfConsistentModel::sizeRadialCyl)
+        .def_readwrite("sizeRadialSph",&galaxymodel::SelfConsistentModel::sizeRadialSph)
+        .def_readwrite("sizeVerticalCyl",&galaxymodel::SelfConsistentModel::sizeVerticalCyl)
+        .def_readwrite("totalPotential",&galaxymodel::SelfConsistentModel::totalPotential)
+        .def_readwrite("useActionInterpolation",&galaxymodel::SelfConsistentModel::useActionInterpolation);
 
     m.def("Vcirc",[](potential::PtrPotential pot, const double R)
     {return potential::v_circ(*pot, R);});
+    m.def("Vcirc",[](potential::PtrPotential pot, std::vector<double> R)
+    {
+        py::list ls;
+        for(int i=0;i<R.size();i++){
+            ls.append(potential::v_circ(*pot, R[i]));
+        }
+        return ls;
+    });
 
     m.def("toPosCar",&coord::toPosCyl<coord::Cyl>);
     m.def("toPosCar",&coord::toPosCyl<coord::Sph>);
@@ -379,11 +679,166 @@ PYBIND11_MODULE(Py_agama, m) {
     //m.def("toPosMomSph",[](coord::PosVelCar xp){return coord::toPosMomSph(xp);});
     //m.def("toPosMomSph",[](coord::PosVelCyl xp){return coord::toPosMomSph(xp);});
     //m.def("toPosMomSph",[](coord::PosMomSph xv){return coord::toPosMomSph(xv);});
-    m.def("from_muRAdec",[](obs::PosVelSky p){return obs::from_muRAdec(p);});
+    m.def("from_RAdec",[](obs::PosVelSky p){return obs::from_RAdec(p);});
     m.def("from_RAdec",[](obs::PosSky p){return obs::from_RAdec(p);});
-    m.def("createPotential",&makepot);
 
+//    m.def("createDensity",[](const std::string vals){return potential::PtrDensity(potential::createDensity(utils::KeyValueMap(vals)));});
+    m.def("createPotential",[](const std::string vals){return potential::PtrPotential(potential::createPotential(utils::KeyValueMap(vals)));});
+    m.def("createPotential",[](const utils::KeyValueMap &params,const particles::ParticleArray<coord::PosCyl> &Particles,const units::ExternalUnits &converter=units::ExternalUnits())
+    {return potential::createPotential(params,Particles,converter);},"params"_a,"particles"_a,"converter"_a=units::ExternalUnits());
+    m.def("createPotential",[](const utils::KeyValueMap &params,const units::ExternalUnits &converter=units::ExternalUnits())
+    {return potential::createPotential(params,converter);},"params"_a,"converter"_a=units::ExternalUnits());
+    m.def("createPotential",[](const utils::KeyValueMap &params,const potential::BasePotential &pot, const units::ExternalUnits &converter=units::ExternalUnits())
+    {return potential::createPotential(params,pot,converter);},"params"_a,"pot"_a,"converter"_a=units::ExternalUnits());
+    m.def("createPotential",[](const utils::KeyValueMap &params,const potential::BaseDensity &dens, const units::ExternalUnits &converter=units::ExternalUnits())
+    {return potential::createPotential(params,dens,converter);},"params"_a,"dens"_a,"converter"_a=units::ExternalUnits());
+    m.def("createPotential",[](const std::vector<utils::KeyValueMap> &params,const units::ExternalUnits &converter=units::ExternalUnits())
+    {return potential::createPotential(params,converter);},"params"_a,"converter"_a=units::ExternalUnits());
+    m.def("createMultipole",[](const potential::BasePotential &src,int lmax,int mmax,int gridSizeR,double rmin=(0.0),double rmax=(0.0))
+    {return potential::Multipole::create(src,lmax,mmax,gridSizeR,rmin,rmax);}
+    ,"src"_a,"lmax"_a,"mmax"_a,"gridSizeR"_a,"rmin"_a=(0.0),"rmax"_a=(0.0));
+    m.def("createMultipole",[](const potential::BaseDensity &src,int lmax,int mmax,int gridSizeR,double rmin=(0.0),double rmax=(0.0))
+    {return potential::Multipole::create(src,lmax,mmax,gridSizeR,rmin,rmax);}
+    ,"src"_a,"lmax"_a,"mmax"_a,"gridSizeR"_a,"rmin"_a=(0.0),"rmax"_a=(0.0));
+    m.def("createDensity",&potential::createDensity,"params"_a,"converter"_a=units::ExternalUnits());
     m.def("integrateTraj",[] (coord::PosVelCyl xv,double T,double dt,potential::PtrPotential pot){
         return orbit::integrateTraj(xv,T,dt,*pot);
     } );  
+    m.def("createDistributionFunction",&df::createDistributionFunction,"params"_a,"potential"_a,"density"_a=NULL,"converter"_a=units::ExternalUnits());
+    m.def("createDistributionFunction",[](const utils::KeyValueMap &params,potential::BasePotential *potential,units::ExternalUnits converter=units::ExternalUnits())
+      {return df::createDistributionFunction(params,potential,NULL,converter);}
+      ,"params"_a,"potential"_a,"converter"_a=units::ExternalUnits());
+    m.def("sampleDensity",[](const potential::BaseDensity &dens,int numPoints)
+    {return galaxymodel::sampleDensity(dens,numPoints);});
+    m.def("samplePosVel",[](const galaxymodel::GalaxyModel &model,int numPoints)
+    {return galaxymodel::samplePosVel(model,numPoints);});
+    m.def("sampleVelocity",[](const galaxymodel::GalaxyModel &model,int numPoints,coord::PosCyl x)
+    {return galaxymodel::sampleVelocity(model,x,numPoints);});
+    m.def("writeSnapshot",[](const std::string &fileName, const particles::ParticleArray<coord::PosCar> &particles,
+        const std::string &fileFormat="Text",
+        const units::ExternalUnits &unitConverter=units::ExternalUnits(),const std::string &header="", 
+        const double time=-((float)((float)((1E300)*(1E300)*(0.0F)))), const bool append=false)
+        {particles::writeSnapshot(fileName,particles,fileFormat,unitConverter,header,time,append);},"fileName"_a,"particles"_a,"fileFormat"_a="Text",
+        "unitConverter"_a=units::ExternalUnits(),"header"_a="","time"_a=-((float)((float)((1E300)*(1E300)*(0.0F)))),"append"_a=false);
+    m.def("writeSnapshot",[](const std::string &fileName, const particles::ParticleArray<coord::PosCyl> &particles,
+        const std::string &fileFormat="Text",
+        const units::ExternalUnits &unitConverter=units::ExternalUnits(),const std::string &header="", 
+        const double time=-((float)((float)((1E300)*(1E300)*(0.0F)))), const bool append=false)
+        {particles::writeSnapshot(fileName,particles,fileFormat,unitConverter,header,time,append);},"fileName"_a,"particles"_a,"fileFormat"_a="Text",
+        "unitConverter"_a=units::ExternalUnits(),"header"_a="","time"_a=-((float)((float)((1E300)*(1E300)*(0.0F)))),"append"_a=false);
+    m.def("writeSnapshot",[](const std::string &fileName, const particles::ParticleArray<coord::PosSph> &particles,
+        const std::string &fileFormat="Text",
+        const units::ExternalUnits &unitConverter=units::ExternalUnits(),const std::string &header="", 
+        const double time=-((float)((float)((1E300)*(1E300)*(0.0F)))), const bool append=false)
+        {particles::writeSnapshot(fileName,particles,fileFormat,unitConverter,header,time,append);},"fileName"_a,"particles"_a,"fileFormat"_a="Text",
+        "unitConverter"_a=units::ExternalUnits(),"header"_a="","time"_a=-((float)((float)((1E300)*(1E300)*(0.0F)))),"append"_a=false);
+     m.def("writeSnapshot",[](const std::string &fileName, const particles::ParticleArray<coord::PosVelCar> &particles,
+        const std::string &fileFormat="Text",
+        const units::ExternalUnits &unitConverter=units::ExternalUnits(),const std::string &header="", 
+        const double time=-((float)((float)((1E300)*(1E300)*(0.0F)))), const bool append=false)
+        {particles::writeSnapshot(fileName,particles,fileFormat,unitConverter,header,time,append);},"fileName"_a,"particles"_a,"fileFormat"_a="Text",
+        "unitConverter"_a=units::ExternalUnits(),"header"_a="","time"_a=-((float)((float)((1E300)*(1E300)*(0.0F)))),"append"_a=false);
+     m.def("writeSnapshot",[](const std::string &fileName, const particles::ParticleArray<coord::PosVelCyl> &particles,
+        const std::string &fileFormat="Text",
+        const units::ExternalUnits &unitConverter=units::ExternalUnits(),const std::string &header="", 
+        const double time=-((float)((float)((1E300)*(1E300)*(0.0F)))), const bool append=false)
+        {particles::writeSnapshot(fileName,particles,fileFormat,unitConverter,header,time,append);},"fileName"_a,"particles"_a,"fileFormat"_a="Text",
+        "unitConverter"_a=units::ExternalUnits(),"header"_a="","time"_a=-((float)((float)((1E300)*(1E300)*(0.0F)))),"append"_a=false);
+    m.def("writeSnapshot",[](const std::string &fileName, const particles::ParticleArray<coord::PosVelSph> &particles,
+        const std::string &fileFormat="Text",
+        const units::ExternalUnits &unitConverter=units::ExternalUnits(),const std::string &header="", 
+        const double time=-((float)((float)((1E300)*(1E300)*(0.0F)))), const bool append=false)
+        {particles::writeSnapshot(fileName,particles,fileFormat,unitConverter,header,time,append);},"fileName"_a,"particles"_a,"fileFormat"_a="Text",
+        "unitConverter"_a=units::ExternalUnits(),"header"_a="","time"_a=-((float)((float)((1E300)*(1E300)*(0.0F)))),"append"_a=false);
+    m.def("updateTotalPotential",&galaxymodel::updateTotalPotential);
+    m.def("doIteration",&galaxymodel::doIteration);
+    m.def("createCylSpline",[](const potential::BaseDensity &src, int mmax,unsigned int gridSizeR,double Rmin,double Rmax,unsigned int gridSizez,
+    double zmin,double zmax,bool useDerivs=true){return potential::CylSpline::create(src,mmax,gridSizeR,Rmin,Rmax,gridSizez,zmin,zmax,useDerivs);},
+    "src"_a,"mmax"_a,"gridSizeR"_a,"Rmin"_a,"Rmax"_a,"gridSizez"_a,"zmin"_a,"zmax"_a,"useDerivs"_a=true);
+    m.def("assignVelocity",&galaxymodel::assignVelocity);
+    m.def("computeMoments",[](const galaxymodel::GalaxyModel &model,const coord::PosCyl &pos,bool Dens=true, 
+        bool freqs=false, bool vel=false,bool vel2=false,const bool seperate=false, const double reqRelerror=0.001,
+        const int maxNumEval=100000)
+        -> std::variant<double,actions::Frequencies,coord::Vel2Cyl,std::vector<double>,std::vector<coord::Vel2Cyl>,
+        std::vector<actions::Frequencies>,py::list>{
+        if(!Dens&&!freqs&&!vel&&!vel2)Dens=true;
+        int dflen=seperate?model.distrFunc.numValues():1;
+        if(dflen>1){
+            std::vector<double> density(dflen),vels(dflen);
+            std::vector<coord::Vel2Cyl> vel2s(dflen);
+            std::vector<actions::Frequencies> freq(dflen);
+            galaxymodel::computeMoments(model,pos,Dens?&density[0]:NULL,vel?&vels[0]:NULL,
+                vel2?&vel2s[0]:NULL,freqs?&freq[0]:NULL,NULL,NULL,NULL,seperate,reqRelerror,maxNumEval);
+            if(Dens&&vel||Dens&&vel2||Dens&&freqs||freqs&&vel||freqs&&vel2||vel&&vel2){
+                py::list ls;
+                if(Dens)ls.append(density);
+                if(vel)ls.append(vels);
+                if(vel2)ls.append(vel2s);
+                if(freqs)ls.append(freq);
+                return ls;
+            }
+            if(Dens) return density;
+            if(vel) return vels;
+            if(vel2) return vel2s;
+            if(freqs) return freq;
+        }
+        double density,vels;
+        coord::Vel2Cyl vel2s;
+        actions::Frequencies freq;
+        galaxymodel::computeMoments(model,pos,Dens?&density:NULL,vel?&vels:NULL,
+                vel2?&vel2s:NULL,freqs?&freq:NULL,NULL,NULL,NULL,seperate,reqRelerror,maxNumEval);
+        if(Dens&&vel||Dens&&vel2||Dens&&freqs||freqs&&vel||freqs&&vel2||vel&&vel2){
+            py::list ls;
+            if(Dens)ls.append(density);
+            if(vel)ls.append(vels);
+            if(vel2)ls.append(vel2s);
+            if(freqs)ls.append(freq);
+             return ls;
+        }
+        if(Dens) return density;
+        if(vel) return vels;
+        if(vel2) return vel2s;
+        return freq;
+
+    },"model"_a,"pos"_a,"Dens"_a=true,"freqs"_a=false,"vel"_a=false,"vel2"_a=false,"seperate"_a=false,
+    "reqRelError"_a=0.001,"maxNumEval"_a=100000);
+
+    m.def("computeProjectedMoments",[](const galaxymodel::GalaxyModel &model,const double R,
+        const bool seperate=false, const double reqRelerror=0.001, const int maxNumEval=100000){
+        py::list ls;
+        int dflen=seperate?model.distrFunc.numValues():1;
+        if(dflen>1){
+            std::vector<double> density(dflen),rmsH(dflen),rmsV(dflen);
+            galaxymodel::computeProjectedMoments(model,R,&density[0],&rmsH[0],&rmsV[0]
+                ,NULL, NULL,NULL,seperate,reqRelerror,maxNumEval);
+            ls.append(density);
+            ls.append(rmsH);
+            ls.append(rmsV);
+        }else{
+            double density,rmsH,rmsV;
+            galaxymodel::computeProjectedMoments(model,R,&density,&rmsH,&rmsV
+                    ,NULL, NULL,NULL,seperate,reqRelerror,maxNumEval);
+            ls.append(density);
+            ls.append(rmsH);
+            ls.append(rmsV);
+        }
+        return ls;
+
+    },"model"_a,"R"_a,"seperate"_a=false,"reqRelError"_a=0.001,"maxNumEval"_a=100000);
+    m.def("computeVelocityDistributionO3",[](const galaxymodel::GalaxyModel &model,const coord::PosCyl &point,
+        const bool projected, const std::vector<double>& gridVR,const std::vector<double>& gridVphi,
+        const std::vector<double>& gridVz,const bool seperate=false,const double reqRelError=(0.01),
+    const int maxNumEval=1000000){
+        py::list ls;
+        int dflen=seperate?model.distrFunc.numValues():1;
+        std::vector<double> density,amplVR,amplVz,amplVphi;
+        galaxymodel::computeVelocityDistributionO3(model,point,projected,gridVR,gridVz,gridVphi,&density[0],
+            &amplVR,&amplVz,&amplVphi,seperate,reqRelError,maxNumEval);
+        ls.append(density);
+        ls.append(amplVR);
+        ls.append(amplVphi); 
+        ls.append(amplVz);
+        return ls;
+
+    },"model"_a,"point"_a,"projected"_a,"gridVR"_a,"gridVphi"_a,"gridVz"_a,"seperate"_a=false,"reqRelError"_a=(0.01),"maxNumEval"_a=1000000);
 }

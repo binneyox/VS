@@ -42,6 +42,10 @@ public:
     virtual double totalMass(const double reqRelError=1e-6, const int maxNumEval=1e6,
         double* error=NULL, int* numEval=NULL) const;
 
+    virtual void setMass(const double M){
+	    std::cout << "setMass not defined\n";
+    }
+    
     /** Value of distribution function for the given set of actions J */
     virtual double value(const actions::Actions &J) const=0;
 

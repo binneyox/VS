@@ -854,7 +854,6 @@ template<typename srcCS>
 inline PosVelCyl toPosVelCyl(const PosMomT<srcCS>& from) {
 	return toPosVel<srcCS, Cyl>(from); }
 
-
 /*
  *Compute pu and pv from uv coords and VelCyl
 */

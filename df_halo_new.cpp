@@ -4,7 +4,6 @@
 #include <cmath>
 #include <stdexcept>
 
-#define DE
 //#define HENON
 
 namespace df{
@@ -13,6 +12,22 @@ namespace {  // internal ns
 
 /*Class used to infer H(Jr,L) for a Plummer potential
  */
+class NewOxford_r_syst: public math::IOdeSystem{
+	private:
+		const double r_rat, beta;
+	public:
+		NewOxford_r_syst(double _r_rat, double _beta) :
+		    r_rat(_r_rat), beta(_beta) {};
+		void eval(const double t,const double s[],double dsdt[]) const{
+			//returns Om_r/Om_phi as function of circularity
+			double c = s[1]>0? s[0]/(s[0]+s[1]) : 1;//circularity
+			double psi = c*.5*M_PI;
+			double top = beta!=0? exp(-beta*sin(psi)) : 1; 
+			dsdt[0]=top/(.51+c*(r_rat-.51));//r_rat=Om/kappa
+			dsdt[1]=-1;//t=const-Jr
+		}
+		unsigned int size()  const {return 2;}
+};
 class y_getter : public math::IFunction {
 	const double Jr, L, L0;
 	double cL, Ebot;
@@ -83,91 +98,6 @@ double computeBeta(const DoublePowerLawParam &par)
 	return math::findRoot(BetaFinder(par), 0.0, 2.0, /*root-finder tolerance*/ SQRT_DBL_EPSILON);
 }
 
-/// 2nd helper class used in the root-finder to determine the auxiliary coefficient beta for a cored halo
-class ModifiedBetaFinder: public math::IFunctionNoDeriv{
-	const ModifiedDoublePowerLawParam& par;
-
-    // return the difference between the non-modified and modified DF as a function of beta and
-    // the appropriately scaled action variable (t -> hJ), weighted by d(hJ)/dt for the integration in t
-	double deltaf(const double t, const double beta) const
-	{
-	// integration is performed in a scaled variable t, ranging from 0 to 1,
-	// which is remapped to hJ ranging from 0 to infinity as follows:
-		double hJ    = par.Jcore * t*t*(3-2*t) / pow_2(1-t) / (1+2*t); 
-		double dhJdt = par.Jcore * 6*t / pow_3(1-t) / pow_2(1+2*t);
-		return hJ * hJ * dhJdt *
-				math::pow(1 + par.J0 / hJ,  par.slopeIn) *
-				math::pow(1 + hJ / par.J0, -par.slopeOut) *
-				(math::pow(1 + par.Jcore/hJ * (par.Jcore/hJ - beta), -0.5*par.slopeIn) - 1);
-	}
-
-	public:
-		ModifiedBetaFinder(const ModifiedDoublePowerLawParam& _par) : par(_par) {}
-
-		virtual double value(const double beta) const
-		{
-			double result = 0;
-	// use a fixed-order GL quadrature to compute the integrated difference in normalization between
-	// unmodified and core-modified DF, which is sought to be zero by choosing an appropriate beta
-			static const int GLORDER = 20;  // should be even, to avoid singularity in the integrand at t=0.5
-			for(int i=0; i<GLORDER; i++)
-				result += math::GLWEIGHTS[GLORDER][i] * deltaf(math::GLPOINTS[GLORDER][i], beta);
-			return result;
-		}
-};
-
-// helper function to compute the auxiliary coefficient beta in the case of a central core
-double computeBeta(const ModifiedDoublePowerLawParam &par)
-{
-	if(par.Jcore<=0)
-		return 0;
-	return math::findRoot(ModifiedBetaFinder(par), 0.0, 2.0, /*root-finder tolerance*/ SQRT_DBL_EPSILON);
-}
-
-/// 3rd helper class used in the root-finder to determine the auxiliary coefficient beta for a cored halo
-class SinBetaFinder: public math::IFunctionNoDeriv{
-	const SinDoublePowerLawParam& par;
-
-    // return the difference between the non-modified and modified DF as a function of beta and
-    // the appropriately scaled action variable (t -> hJ), weighted by d(hJ)/dt for the integration in t
-	double deltaf(const double t, const double beta) const
-	{
-	// integration is performed in a scaled variable t, ranging from 0 to 1,
-	// which is remapped to hJ ranging from 0 to infinity as follows:
-		double hJ    = par.Jcore * t*t*(3-2*t) / pow_2(1-t) / (1+2*t); 
-		double dhJdt = par.Jcore * 6*t / pow_3(1-t) / pow_2(1+2*t);
-		return hJ * hJ * dhJdt *
-				math::pow(1 + par.J0 / hJ,  par.slopeIn) *
-				math::pow(1 + hJ / par.J0, -par.slopeOut) *
-				(math::pow(1 + par.Jcore/hJ * (par.Jcore/hJ - beta), -0.5*par.slopeIn) - 1);
-	}
-
-	public:
-		SinBetaFinder(const SinDoublePowerLawParam& _par) : par(_par) {}
-
-		virtual double value(const double beta) const
-		{
-			double result = 0;
-	// use a fixed-order GL quadrature to compute the integrated difference in normalization between
-	// unmodified and core-modified DF, which is sought to be zero by choosing an appropriate beta
-			static const int GLORDER = 20;  // should be even, to avoid singularity in the integrand at t=0.5
-			for(int i=0; i<GLORDER; i++)
-				result += math::GLWEIGHTS[GLORDER][i] * deltaf(math::GLPOINTS[GLORDER][i], beta);
-			return result;
-		}
-
-/*		double g(double x,double y){
-			return (1+y*x*x)/(1+x*x);
-		}*/
-};
-
-// helper function to compute the auxiliary coefficient beta in the case of a central core
-double computeBeta(const SinDoublePowerLawParam &par)
-{
-	if(par.Jcore<=0)
-		return 0;
-	return math::findRoot(SinBetaFinder(par), 0.0, 2.0, /*root-finder tolerance*/ SQRT_DBL_EPSILON);
-}
 
 }  // internal ns
 
@@ -209,9 +139,9 @@ EXP double DoublePowerLaw::value(const actions::Actions &J) const
 {
 	double L=J.Jz+fabs(J.Jphi);
     // linear combination of actions in the inner part of the model (for J<J0)
-	double hJ  = L + par.coefJrIn * J.Jr;
+	double hJ  = par.coefJrIn * J.Jr +par.coefJzIn * J.Jz +fabs(J.Jphi);
     // linear combination of actions in the outer part of the model (for J>J0)
-	double gJ  = L + par.coefJrOut * J.Jr;
+	double gJ  = par.coefJrOut * J.Jr + par.coefJzOut * J.Jz + fabs(J.Jphi);
 	double val = par.norm / pow_3(2*M_PI * par.J0) *
 		     math::pow(1 + math::pow(par.J0 / hJ, par.steepness),  par.slopeIn  / par.steepness) *
 		     math::pow(1 + math::pow(gJ / par.J0, par.steepness), -par.slopeOut / par.steepness);
@@ -226,127 +156,94 @@ EXP double DoublePowerLaw::value(const actions::Actions &J) const
 	return val;
 }
 
-EXP ModifiedDoublePowerLaw::ModifiedDoublePowerLaw(const ModifiedDoublePowerLawParam &inparams) :
-    par(inparams), beta(computeBeta(par))
-{
-    // sanity checks on parameters
-	if(!(par.norm>0))
-		throw std::invalid_argument("ModifiedDoublePowerLaw: normalization must be positive");
-	if(!(par.J0>0))
-		throw std::invalid_argument("ModifiedDoublePowerLaw: break action J0 must be positive");
-	if(!(par.Jcore>=0 && beta>=0))
-		throw std::invalid_argument("ModifiedDoublePowerLaw: core action Jcore is invalid");
-	if(!(par.Jcutoff>=0))
-		throw std::invalid_argument("ModifiedDoublePowerLaw: truncation action Jcutoff must be non-negative");
-	if(!(par.slopeOut>3) && par.Jcutoff==0)
-		throw std::invalid_argument(
-					    "ModifiedDoublePowerLaw: mass diverges at large J (outer slope must be > 3)");
-	if(!(par.slopeIn<3))
-		throw std::invalid_argument(
-					    "ModifiedDoublePowerLaw: mass diverges at J->0 (inner slope must be < 3)");
-	if(!(par.cutoffStrength>0))
-		throw std::invalid_argument("ModifiedDoublePowerLaw: cutoff strength parameter must be positive");
-	if(!(fabs(par.rotFrac)<=1))
-		throw std::invalid_argument(
-					    "ModifiedDoublePowerLaw: amplitude of odd-Jphi component must be between -1 and 1");
-	if(par.Fname!=""){
-		readBrighterThan(par.Fname);
+
+NewDoublePowerLaw::NewDoublePowerLaw(const DoublePowerLawParam& _params,
+				     const potential::BasePotential& _pot) :
+    sigmaJ(_params.sigmaJ), DF0(_params) {
+	actions::mapJcrit(_pot, Jrcrit, Jzcrit);
+}
+double NewDoublePowerLaw::wt(const actions::Actions& J) const{
+	return 1/(1+pow_2(J.Jphi)/(sigmaJ*(sigmaJ+J.Jr+J.Jz)));
+}
+double NewDoublePowerLaw::value(const actions::Actions& J) const{
+	double w = wt(J), sgn = J.Jphi>0? 1 : -1;
+	double Jcr=Jrcrit(J.Jz), Jcz = Jzcrit(J.Jr), eps=.2*sigmaJ;
+	actions::Actions J1;
+	if(J.Jz<Jcz){
+		J1=actions::Actions(J.Jr+.5*(fabs(J.Jphi)-eps), J.Jz, eps);
+	} else {
+		J1=actions::Actions(J.Jr, J.Jz+(fabs(J.Jphi)-eps), eps);
 	}
+	double F0=DF0.value(J), F1=DF0.value(J1);
+	return w*F1 + (1-w)*F0;
 }
 
-EXP double ModifiedDoublePowerLaw::value(const actions::Actions &J) const{
-	double Jp=fabs(J.Jphi), L=Jp+J.Jz, L1=0;
-	double b=.5*(par.coefJzIn+1), c=.5*(par.coefJzIn-1);
-	double cL=Jp+b*J.Jz+c*J.Jz*Jp/(L+L1);
-	double h=par.coefJrIn*J.Jr+.5*cL;
-	double f = par.norm / pow_3(2*M_PI * par.J0) *
-		   math::pow(1 + par.J0 / h,  par.slopeIn) *
-		   math::pow(1 + h / par.J0, -par.slopeOut);
-	if(par.Jcutoff>0)   // exponential cutoff at large J
-		f *= exp(-math::pow(h / par.Jcutoff, par.cutoffStrength));
-	if(par.Jcore>0) {   // central core of nearly-constant f(J) at small J
-		if(h==0) return par.norm / pow_3(2*M_PI * par.J0);
-		f *= math::pow(1 + par.Jcore/h * (par.Jcore/h - beta), -0.5*par.slopeIn);
-	}
+DwarfSpheroid::DwarfSpheroid(const DwarfSpheroidParam& _par): par(_par){}
+	
+double DwarfSpheroid::value(const actions::Actions &J) const {
+	double fJphi=fabs(J.Jphi), L=J.Jz+fJphi;
+	double jt=(1.5*J.Jr+L)/par.J0;
+	double val = par.norm * exp(-pow( jt / par.J0, par.alpha));
 	if(par.rotFrac!=0)  // add the odd part
-		f *= 1 + par.rotFrac * tanh(J.Jphi / par.Jphi0);
-	return f;
+		val *= 1 + par.rotFrac * tanh(J.Jphi / par.Jphi);
+	return val; 
 }
 
-EXP SinDoublePowerLaw::SinDoublePowerLaw(const SinDoublePowerLawParam &inparams) :
-    par(inparams), beta(computeBeta(par))
-{
-    // sanity checks on parameters
-	if(!(par.norm>0))
-		printf("SinDoublePowerLaw: normalization must be positive");
-	if(!(par.J0>0))
-		printf("SinDoublePowerLaw: break action J0 must be positive");
-	if(!(par.Jcore>=0 && beta>=0))
-		printf("SinDoublePowerLaw: core action Jcore is invalid");
-	if(!(par.Jcutoff>=0))
-		printf("SinDoublePowerLaw: truncation action Jcutoff must be non-negative");
-	if(!(par.slopeOut>3) && par.Jcutoff==0)
-		printf("SinDoublePowerLaw: mass diverges at large J (outer slope must be > 3)");
-	if(!(par.slopeIn<3))
-		printf("SinDoublePowerLaw: mass diverges at J->0 (inner slope must be < 3)");
-	if(!(par.cutoffStrength>0))
-		printf("SinDoublePowerLaw: cutoff strength parameter must be positive");
-	if(!(fabs(par.rotFrac)<=1))
-		printf("SinDoublePowerLaw: amplitude of odd-Jphi component must be between -1 and 1");
-	if(par.Fname!=""){
-		readBrighterThan(par.Fname);
-	}
+NewDwarfSpheroid::NewDwarfSpheroid(const DwarfSpheroidParam& _par,
+				     const potential::BasePotential& _pot) :
+    sigmaJ(_par.sigmaJ), DF0(_par) {
+	actions::mapJcrit(_pot, Jrcrit, Jzcrit);
 }
-EXP double SinDoublePowerLaw::value(const actions::Actions &J) const
-{
-	double modJphi=fabs(J.Jphi);
-	double L=J.Jz+modJphi;
-	double c=L/(L+J.Jr);
-	double jt=(1.5*J.Jr+L)/par.L0;
-	double jta=pow(jt,par.alpha), xi=jta/(1+jta);
-	double rat=(1-xi)*par.Fin+xi*par.Fout;
-	double a=.5*(rat+1), b=.5*(rat-1);
-	double cL= L>0? J.Jz*(a+b*modJphi/L)+modJphi: 0;
-	double fac=exp(par.beta*sin(0.5*M_PI*c));
-	double hJ=J.Jr/fac + .5*(1+c*xi)*fac*cL;
-	double gJ=hJ;
-	double val = par.norm / pow_3(2*M_PI * par.J0) *
-		     math::pow(1 + par.J0 / hJ,  par.slopeIn) *
-		     math::pow(1 + gJ / par.J0, -par.slopeOut);
-//	printf("%g %g %g |",J.Jz,L,cL);
-	if(par.Jcutoff>0){   // exponential cutoff at large J
-		double fac=math::pow(gJ / par.Jcutoff, par.cutoffStrength);
-		if(fac>25) return 0;
-		else val *= exp(-fac);
+double NewDwarfSpheroid::wt(const actions::Actions& J) const{
+	return 1/(1+pow_2(J.Jphi)/(sigmaJ*(sigmaJ+J.Jr+J.Jz)));
+}
+double NewDwarfSpheroid::value(const actions::Actions& J) const{
+	double w = wt(J), sgn = J.Jphi>0? 1 : -1;
+	double Jcr=Jrcrit(J.Jz), Jcz = Jzcrit(J.Jr), eps=.2*sigmaJ;
+	actions::Actions J1;
+	if(J.Jz<Jcz){
+		J1=actions::Actions(J.Jr+.5*(fabs(J.Jphi)-eps), J.Jz, eps);
+	} else {
+		J1=actions::Actions(J.Jr, J.Jz+(fabs(J.Jphi)-eps), eps);
 	}
-	if(par.Jcore>0) {   // central core of nearly-constant f(J) at small J
-		if(hJ==0) return par.norm / pow_3(2*M_PI * par.J0);
-		val *= math::pow(1 + par.Jcore/hJ * (par.Jcore/hJ - beta), -0.5*par.slopeIn);
+	double F0=DF0.value(J), F1=DF0.value(J1);
+	return w*F1 + (1-w)*F0;
+}
+
+EXP double NewOxford::h(const actions::Actions &J) const{
+	//Move over E surface to circular orbit then to circular orbit &
+	//return Lc
+	const double L=J.Jz+fabs(J.Jphi);
+	double rats[2];	freq.epicycle_ratios(1.4*J.Jr+L, rats);//rats{Om/kappa,nu/Om} at this E
+	double ic[2]={L/par.J0, J.Jr/par.J0};
+	NewOxford_r_syst r_system(rats[0], par.beta);
+	math::OdeSolverDOP853 r_solver(r_system);
+	r_solver.init(ic);
+	double t=0; int j=0; double jr=ic[1];
+	const int nmax=30;
+	while(j<nmax && jr>0){//until Jr=0
+		r_solver.doStep(0); t=r_solver.getTime(); jr=r_solver.getSol(t,1);
+		j++;
 	}
+	double jp = j==0? ic[0] : r_solver.getSol(ic[1],0);// Jphi/L0 when Jr=0
+	if(j==nmax){
+		double s[2]={r_solver.getSol(t,0),r_solver.getSol(t,1)};
+		printf("r_solver error: %g (%g %g) (%g %g)\n",t,ic[0],ic[1],s[0],s[1]);
+		exit(0);
+	}
+	return par.J0*jp;//return Jphi when Jr=0
+}
+
+EXP double NewOxford::value(const actions::Actions &J) const{
+	double hJ=h(J);
+	double val =  par.norm / pow_3(2*M_PI * par.J0) *
+		      math::pow(1 + math::pow(par.J0 / hJ, par.steepness),  par.slopeIn  / par.steepness) *
+		      math::pow(1 + math::pow(hJ / par.J0, par.steepness), -par.slopeOut / par.steepness);
 	if(par.rotFrac!=0)  // add the odd part
 		val *= 1 + par.rotFrac * tanh(J.Jphi / par.Jphi0);
-	if(std::isnan(val)){
-		printf("SinDoublePowerLaw: val=NAN, J=(%g %g %g), hJ=%g\n",J.Jr,J.Jz,J.Jphi,hJ);
-		printf("%g %g %g %g %g\n",cL,fac,hJ,par.norm,par.Jcore);
-		printf("%g %g %g\n",par.J0,par.slopeIn,par.slopeOut); exit(1);
-	}
+	if(par.Jcutoff>0)   // exponential cutoff at large J
+		val *= exp(-math::pow(hJ / par.Jcutoff, par.cutoffStrength));
 	return val;
-}
-
-EXP void SinDoublePowerLaw::write_params(std::ofstream &strm,const units::InternalUnits &intUnits) const{
-	strm << "type\t = SinDoublePowerLaw\n";
-	strm << "mass\t = " << par.mass * intUnits.to_Msun << '\n';
-	strm << "J0\t = " << par.J0 * intUnits.to_Kpc_kms << '\n';
-	strm << "L0\t = " << par.L0 * intUnits.to_Kpc_kms << '\n';
-	strm << "Jcore\t = " << par.Jcore * intUnits.to_Kpc_kms << '\n';
-	strm << "Jcutoff\t = " << par.Jcutoff * intUnits.to_Kpc_kms << '\n';
-	strm << "cutoffStrength\t = " << par.cutoffStrength << '\n';
-	strm << "slopeIn\t = " << par.slopeIn << '\n';
-	strm << "slopeOut\t = " << par.slopeOut << '\n';
-	strm << "Fin\t = " << par.Fin <<'\n';
-	strm << "Fout\t = " << par.Fout <<'\n';
-	strm << "alpha\t = " << par.alpha << '\n';
-	strm << "beta\t = " << par.beta << '\n';
 }
 
 EXP PlummerDF::PlummerDF(const PlummerParam& params): par(params){

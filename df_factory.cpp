@@ -8,15 +8,17 @@
 namespace df {
 
 EXP DoublePowerLawParam parseDoublePowerLawParam(
-					     const utils::KeyValueMap& kvmap,
-					     const units::ExternalUnits& conv)
+	const utils::KeyValueMap& kvmap,
+	const units::ExternalUnits& conv)
 {
 	DoublePowerLawParam par;
 	par.norm      = kvmap.getDouble("norm",      par.norm)    * conv.massUnit;
+	par.mass      = kvmap.getDouble("mass",      par.mass)    * conv.massUnit;
 	par.J0        = kvmap.getDouble("J0",        par.J0)      * conv.lengthUnit * conv.velocityUnit;
 	par.Jcutoff   = kvmap.getDouble("Jcutoff",   par.Jcutoff) * conv.lengthUnit * conv.velocityUnit;
 	par.Jphi0     = kvmap.getDouble("Jphi0",     par.Jphi0)   * conv.lengthUnit * conv.velocityUnit;
 	par.Jcore     = kvmap.getDouble("Jcore",     par.Jcore)   * conv.lengthUnit * conv.velocityUnit;
+	par.sigmaJ    = kvmap.getDouble("sigmaJ",    par.sigmaJ)  * conv.lengthUnit * conv.velocityUnit;
 	par.slopeIn   = kvmap.getDouble("slopeIn",   par.slopeIn);
 	par.slopeOut  = kvmap.getDouble("slopeOut",  par.slopeOut);
 	par.steepness = kvmap.getDouble("steepness", par.steepness);
@@ -26,52 +28,21 @@ EXP DoublePowerLawParam parseDoublePowerLawParam(
 	par.coefJzOut = kvmap.getDouble("coefJzOut", par.coefJzOut);
 	par.rotFrac   = kvmap.getDouble("rotFrac",   par.rotFrac);
 	par.cutoffStrength = kvmap.getDouble("cutoffStrength", par.cutoffStrength);
-	par.Fname = kvmap.getString("PopFile", par.Fname);
+	par.Fname     = kvmap.getString("PopFile", par.Fname);
 	return par;
 }
 
-EXP ModifiedDoublePowerLawParam parseModifiedDoublePowerLawParam(
+EXP DwarfSpheroidParam parseDwarfSpheroidParam(
 	const utils::KeyValueMap& kvmap,
 	const units::ExternalUnits& conv)
 {
-	ModifiedDoublePowerLawParam par;
-	par.norm      = kvmap.getDouble("norm",      par.norm)    * conv.massUnit;
-	par.J0        = kvmap.getDouble("J0",        par.J0)      * conv.lengthUnit * conv.velocityUnit;
-	par.Jcutoff   = kvmap.getDouble("Jcutoff",   par.Jcutoff) * conv.lengthUnit * conv.velocityUnit;
-	par.Jphi0     = kvmap.getDouble("Jphi0",     par.Jphi0)   * conv.lengthUnit * conv.velocityUnit;
-	par.Jcore     = kvmap.getDouble("Jcore",     par.Jcore)   * conv.lengthUnit * conv.velocityUnit;
-	par.L0	      = kvmap.getDouble("L0",        par.L0)      * conv.lengthUnit * conv.velocityUnit;
-	par.slopeIn   = kvmap.getDouble("slopeIn",   par.slopeIn);
-	par.slopeOut  = kvmap.getDouble("slopeOut",  par.slopeOut);
-	par.cutoffStrength = kvmap.getDouble("cutoffStrength", par.cutoffStrength);
-	par.coefJrIn  = kvmap.getDouble("coefJrIn",  par.coefJrIn);
-	par.coefJzIn  = kvmap.getDouble("coefJzIn",  par.coefJzIn);
-	par.rotFrac   = kvmap.getDouble("rotFrac",   par.rotFrac);
-	par.Fname = kvmap.getString("PopFile", par.Fname);
-	return par;
-}
-
-EXP SinDoublePowerLawParam parseSinDoublePowerLawParam(
-	const utils::KeyValueMap& kvmap,
-	const units::ExternalUnits& conv)
-{
-	SinDoublePowerLawParam par;
-	par.norm      = kvmap.getDouble("norm",      par.norm)    * conv.massUnit;
-	par.mass      = kvmap.getDouble("mass",      par.mass)    * conv.massUnit;
-	par.J0        = kvmap.getDouble("J0",        par.J0)      * conv.lengthUnit * conv.velocityUnit;
-	par.Jcutoff   = kvmap.getDouble("Jcutoff",   par.Jcutoff) * conv.lengthUnit * conv.velocityUnit;
-	par.Jphi0     = kvmap.getDouble("Jphi0",     par.Jphi0)   * conv.lengthUnit * conv.velocityUnit;
-	par.Jcore     = kvmap.getDouble("Jcore",     par.Jcore)   * conv.lengthUnit * conv.velocityUnit;
-	par.L0	      = kvmap.getDouble("L0",        par.L0)      * conv.lengthUnit * conv.velocityUnit;
-	par.slopeIn   = kvmap.getDouble("slopeIn",   par.slopeIn);
-	par.slopeOut  = kvmap.getDouble("slopeOut",  par.slopeOut);
-	par.cutoffStrength = kvmap.getDouble("cutoffStrength", par.cutoffStrength);
-	par.alpha     = kvmap.getDouble("alpha",     par.alpha);
-	par.beta      = kvmap.getDouble("beta",      par.beta);
-	par.Fin       = kvmap.getDouble("Fin",       par.Fin);
-	par.Fout      = kvmap.getDouble("Fout",      par.Fout);
-	par.rotFrac   = kvmap.getDouble("rotFrac",   par.rotFrac);
-	par.Fname     = kvmap.getString("PopFile",   par.Fname);
+	DwarfSpheroidParam par;
+	par.norm	= kvmap.getDouble("norm", par.norm)	* conv.massUnit;
+	par.J0		= kvmap.getDouble("J0", par.J0)		* conv.lengthUnit * conv.velocityUnit;
+	par.alpha	= kvmap.getDouble("alpha", par.alpha);
+	par.rotFrac	= kvmap.getDouble("rotFrac", par.rotFrac);
+	par.Jphi	= kvmap.getDouble("Jphi", par.Jphi)	* conv.lengthUnit * conv.velocityUnit;
+	par.sigmaJ	= kvmap.getDouble("sigmaJ", par.sigmaJ) * conv.lengthUnit * conv.velocityUnit;
 	return par;
 }
 
@@ -130,7 +101,7 @@ EXP ExponentialParam parseExponentialParam(
 	par.pz     = kvmap.getDouble("pz",	par.pz);
 	par.addJden= kvmap.getDouble("addJden",	par.addJden)* conv.lengthUnit * conv.velocityUnit;
 	par.addJvel= kvmap.getDouble("addJvel",	par.addJvel)* conv.lengthUnit * conv.velocityUnit;
-	par.Fname = kvmap.getString("PopFile",	par.Fname);
+	par.Fname  = kvmap.getString("PopFile",	par.Fname);
 	return par;
 }
 
@@ -182,50 +153,28 @@ EXP IsochroneParam parseIsochroneParam(
 	return par;
 }
 
-EXP OxfordParam parseOxfordParams(
+EXP NewOxfordParam parseNewOxfordParam(
 				  const utils::KeyValueMap& kvmap,
 				  const units::ExternalUnits& conv)
 {
-	OxfordParam par;
-	par.mass      = kvmap.getDouble("mass")    * conv.massUnit;
-	par.J0        = kvmap.getDouble("J0")      * conv.lengthUnit * conv.velocityUnit;
-	par.Jcutoff   = kvmap.getDouble("Jcutoff") * conv.lengthUnit * conv.velocityUnit;
-	par.Jphi0     = kvmap.getDouble("Jphi0")   * conv.lengthUnit * conv.velocityUnit;
-	par.Jcore     = kvmap.getDouble("Jcore")   * conv.lengthUnit * conv.velocityUnit;
-	par.L0        = kvmap.getDouble("L0")      * conv.lengthUnit * conv.velocityUnit;
-	par.gamma0    = kvmap.getDouble("gamma0",    par.gamma0);
-	par.gamma1    = kvmap.getDouble("gamma1",    par.gamma1);
-	par.bz        = kvmap.getDouble("bz",        par.bz);
+	NewOxfordParam par;
+	par.norm      = kvmap.getDouble("norm", par.norm)    * conv.massUnit;
+	par.mass      = kvmap.getDouble("mass", par.mass)    * conv.massUnit;
+	par.J0        = kvmap.getDouble("J0", par.J0)        * conv.lengthUnit * conv.velocityUnit;
+	par.Jcutoff   = kvmap.getDouble("Jcutoff", par.Jcutoff) * conv.lengthUnit * conv.velocityUnit;
+	par.Jphi0     = kvmap.getDouble("Jphi0", par.Jcutoff)* conv.lengthUnit * conv.velocityUnit;
+	par.Jcore     = kvmap.getDouble("Jcore", par.Jcore)  * conv.lengthUnit * conv.velocityUnit;
 	par.slopeIn   = kvmap.getDouble("slopeIn",   par.slopeIn);
 	par.slopeOut  = kvmap.getDouble("slopeOut",  par.slopeOut);
 	par.steepness = kvmap.getDouble("steepness", par.steepness);
-	par.coefLin   = kvmap.getDouble("coefLin",   par.coefLin);
+	par.beta     = kvmap.getDouble("beta",	     par.beta);
 	par.kIn       = kvmap.getDouble("kIn",       par.kIn);
-	par.coefLout  = kvmap.getDouble("coefLout",  par.coefLout);
-	par.kOut      = kvmap.getDouble("kOut",      par.kOut);
 	par.rotFrac   = kvmap.getDouble("rotFrac",   par.rotFrac);
 	par.cutoffStrength = kvmap.getDouble("cutoffStrength", par.cutoffStrength);
+	par.Fname  = kvmap.getString("PopFile", par.Fname);
 	return par;
 }
 
-EXP BolognaParam parseBolognaParams(
-			      const utils::KeyValueMap& kvmap,
-			      const units::ExternalUnits& conv)
-{
-	BolognaParam par;
-	par.mass      = kvmap.getDouble("mass")    * conv.massUnit;
-	par.J0        = kvmap.getDouble("J0")      * conv.lengthUnit * conv.velocityUnit;
-	par.Jphi      = kvmap.getDouble("Jphi")   * conv.lengthUnit * conv.velocityUnit;
-	par.L0        = kvmap.getDouble("L0")   * conv.lengthUnit * conv.velocityUnit;
-	par.gamma     = kvmap.getDouble("gamma", par.gamma);
-	par.L1        = kvmap.getDouble("L1")   * conv.lengthUnit * conv.velocityUnit;
-	par.alpha     = kvmap.getDouble("alpha", par.alpha);
-	par.coefL     = kvmap.getDouble("coefL", par.coefL);
-	par.kIn       = kvmap.getDouble("kIn", par.kIn);
-	par.kOut      = kvmap.getDouble("kOut", par.kOut);
-	par.rotFrac   = kvmap.getDouble("rotFrac", par.rotFrac);
-	return par;
-}
 
 inline void checkNonzero(const potential::BasePotential* potential, const std::string& type)
 {
@@ -243,7 +192,7 @@ EXP PtrDistributionFunction createDistributionFunction(
     // for some DF types, there are two alternative ways of specifying the normalization:
     // either directly as norm, Sigma0, etc., or as the total mass, from which the norm is computed
     // by creating a temporary instance of a corresponding DF class, and computing its mass
-    double mass = kvmap.getDouble("mass", NAN)* converter.massUnit;
+    double mass = kvmap.getDouble("mass", NAN) * converter.massUnit;
     if(utils::stringsEqual(type, "DoublePowerLaw")) {
 	    DoublePowerLawParam par = parseDoublePowerLawParam(kvmap, converter);
 	    if(mass>0) {
@@ -252,21 +201,29 @@ EXP PtrDistributionFunction createDistributionFunction(
 	    }
 	    return PtrDistributionFunction(new DoublePowerLaw(par));
     }
-    if(utils::stringsEqual(type, "ModifiedDoublePowerLaw")) {
-	    ModifiedDoublePowerLawParam par = parseModifiedDoublePowerLawParam(kvmap, converter);
+    if(utils::stringsEqual(type, "NewDoublePowerLaw")) {
+	    DoublePowerLawParam par = parseDoublePowerLawParam(kvmap, converter);
 	    if(mass>0) {
 		    par.norm = 1.0;
-		    par.norm = mass / ModifiedDoublePowerLaw(par).totalMass();
+		    par.norm = mass / DoublePowerLaw(par).totalMass();
 	    }
-	    return PtrDistributionFunction(new ModifiedDoublePowerLaw(par));
+	    return PtrDistributionFunction(new NewDoublePowerLaw(par, *potential));
     }
-    if(utils::stringsEqual(type, "SinDoublePowerLaw")) {
-	    SinDoublePowerLawParam par = parseSinDoublePowerLawParam(kvmap, converter);
+    if(utils::stringsEqual(type, "DwarfSpheroid")) {
+	    DwarfSpheroidParam par = parseDwarfSpheroidParam(kvmap, converter);
 	    if(mass>0) {
-		    par.norm = 1.0;
-		    par.norm = mass / SinDoublePowerLaw(par).totalMass();
+		    par.norm = 1;
+		    par.norm = mass/DwarfSpheroid(par).totalMass();
 	    }
-	    return PtrDistributionFunction(new SinDoublePowerLaw(par));
+	    return PtrDistributionFunction(new DwarfSpheroid(par));
+    }
+    if(utils::stringsEqual(type, "NewDwarfSpheroid")) {
+	    DwarfSpheroidParam par = parseDwarfSpheroidParam(kvmap, converter);
+	    if(mass>0) {
+		    par.norm = 1;
+		    par.norm = mass/DwarfSpheroid(par).totalMass();
+	    }
+	    return PtrDistributionFunction(new NewDwarfSpheroid(par, *potential));
     }
     else if(utils::stringsEqual(type, "Exponential")) {
 	    ExponentialParam par = parseExponentialParam(kvmap, converter);
@@ -313,14 +270,19 @@ EXP PtrDistributionFunction createDistributionFunction(
 	    potential::Interpolator pot_interp(*potential);
 	    return PtrDistributionFunction(new IsochroneDF(parseIsochroneParam(kvmap, converter)));
     }
-    else if(utils::stringsEqual(type, "Oxford")) {
+    else if(utils::stringsEqual(type, "NewOxford")) {
 	    checkNonzero(potential, type);
+	    NewOxfordParam par = parseNewOxfordParam(kvmap, converter);
 	    potential::Interpolator pot_interp(*potential);
-	    return PtrDistributionFunction(new Oxford(parseOxfordParams(kvmap, converter),pot_interp));
+	    if(mass>0) {
+		    par.norm = 1.0;
+		    par.norm = mass / NewOxford(par,pot_interp).totalMass();
+	    }
+	    return PtrDistributionFunction(new NewOxford(par, pot_interp));
     }
-    else if(utils::stringsEqual(type, "Bologna")) {
+/*    else if(utils::stringsEqual(type, "Bologna")) {
 	    return PtrDistributionFunction(new Bologna(parseBolognaParams(kvmap, converter)));
-    }
+    }*/
 
     else{
 	    printf("Unknown type of distribution function: %s xx\n",type.c_str()); exit(1);

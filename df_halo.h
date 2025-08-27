@@ -9,6 +9,8 @@
 #include "math_core.h"
 #include "math_ode.h"
 #include "potential_utils.h"
+#include "potential_factory.h"
+#include "actions_newtorus.h"
 #include <fstream>
 #include <cmath>
 #define EXP __declspec(dllexport)
@@ -22,8 +24,12 @@ namespace df{
 struct DoublePowerLawParam{
 	double
 			norm,      ///< normalization factor with the dimension of mass
+			mass,	   ///< desired total mass
 			J0,        ///< break action (defines the transition between inner and outer regions)
 			Jcutoff,   ///< cutoff action (sets exponential suppression at J>Jcutoff, 0 to disable)
+			Jphi0,     ///< controls the steepness of rotation and the size of non-rotating core
+			Jcore,     ///< central core size for a Cole&Binney-type modified double-power-law halo
+			sigmaJ,    ///< parameter setting size of region where df/dJz=df/dJphi et 
 			slopeIn,   ///< power-law index for actions below the break action (Gamma)
 			slopeOut,  ///< power-law index for actions above the break action (Beta)
 			steepness, ///< steepness of the transition between two asymptotic regimes (eta)
@@ -32,13 +38,26 @@ struct DoublePowerLawParam{
 			coefJzIn,  ///< contribution of vertical action to h(J), controlling anisotropy below J_0 (h_z)
 			coefJrOut, ///< contribution of radial   action to g(J), controlling anisotropy above J_0 (g_r)
 			coefJzOut, ///< contribution of vertical action to g(J), controlling anisotropy above J_0 (g_z)
-			rotFrac,   ///< relative amplitude of the odd-Jphi component (-1 to 1, 0 means no rotation)
-			Jphi0,     ///< controls the steepness of rotation and the size of non-rotating core
-			Jcore;     ///< central core size for a Cole&Binney-type modified double-power-law halo
+			rotFrac;   ///< relative amplitude of the odd-Jphi component (-1 to 1, 0 means no rotation)
 	std::string Fname;
 	DoublePowerLawParam() :  ///< set default values for all fields (NAN means that it must be set manually)
-	    norm(NAN), J0(NAN), Jcutoff(0), slopeIn(NAN), slopeOut(NAN), steepness(1), cutoffStrength(2),
-	    coefJrIn(1), coefJzIn(1), coefJrOut(1), coefJzOut(1), rotFrac(0), Jphi0(0), Jcore(0) {}
+	    norm(NAN), J0(NAN), Jcutoff(1e6), Jphi0(0), Jcore(0), sigmaJ(100), 
+	    slopeIn(NAN), slopeOut(NAN), steepness(1), cutoffStrength(2),
+	    coefJrIn(1), coefJzIn(1), coefJrOut(1), coefJzOut(1), rotFrac(0) {}
+};
+
+// Parameters of DSph DF introduced by Pascale+
+struct DwarfSpheroidParam{
+	double
+			norm,
+			mass,
+			J0,
+			alpha,
+			rotFrac,
+			Jphi,
+			sigmaJ;
+	DwarfSpheroidParam() :
+	    norm(1), J0(NAN), alpha(.25), rotFrac(0), Jphi(1), sigmaJ(100) {} 
 };
 
 /** General double power-law model.
@@ -76,87 +95,74 @@ class EXP DoublePowerLaw: public BaseDistributionFunction{
 		virtual double value(const actions::Actions &J) const;
 };
 
-/// Parameters that describe a modified double power law distribution function.
-struct ModifiedDoublePowerLawParam{
+/// Parameters of f(J_r,L) that delivers anisotropic double-power-law
+/// spheres by solving an ODE for f
+struct NewOxfordParam{
 	double
-			norm,      ///< normalization factor with the dimension of mass
-			J0,        ///< break action (defines the transition between inner and outer regions)
-			Jcutoff,   ///< cutoff action (sets exponential suppression at J>Jcutoff, 0 to disable)
-			Jphi0,     ///< controls the steepness of rotation and the size of non-rotating core
-			Jcore,     ///< central core size for a Cole&Binney-type modified double-power-law halo
-			L0,        ///< helps define E surrogate jt
-			slopeIn,   ///< power-law index for actions below the break action (Gamma)
-			slopeOut,  ///< power-law index for actions above the break action (Beta)
-			cutoffStrength, ///< steepness of exponential suppression at J>Jcutoff (zeta)
-			coefJrIn,     ///< radial anisotropy
-			coefJzIn,      ///< introduces flattening
-			rotFrac;   ///< relative amplitude of the odd-Jphi component (-1 to 1, 0 means no rotation)
+			norm,
+			mass,
+			J0,
+			Jcutoff,
+			Jphi0,
+			Jcore,
+			slopeIn,
+			slopeOut,
+			steepness,
+			beta,
+			kIn,
+			rotFrac,
+			cutoffStrength;
 	std::string Fname;
-	ModifiedDoublePowerLawParam() :  ///< set default values for all fields (NAN means that it must be set manually)
-	    norm(NAN), J0(NAN), Jcutoff(0), slopeIn(NAN), slopeOut(NAN), cutoffStrength(2),
-	    coefJrIn(NAN), coefJzIn(NAN), Jphi0(0), rotFrac(0), Jcore(0) {}
+	NewOxfordParam() :  ///< set default values for all fields (NAN means that it must be set manually)
+	    norm(1), mass(NAN), J0(NAN), Jcutoff(1e6), Jphi0(0), Jcore(0),
+	    slopeIn(NAN), slopeOut(NAN), steepness(1), beta(0), kIn(0),
+	    rotFrac(0), cutoffStrength(2) {}
 };
 
-/** Modified double power-law model.
-    The DF is similar to the basic double power law DF but we replace L
-    by cL=a*Jz+b*Jz*|Jphi|/L+|Jphi| with a=(k+1)/2 b=(k-1)/2. When
-    k=nu/Omega, the ratio of epicycle frequencies, g=Jr+.5*(1+c*xi)*cL
-    is approximately a function of H, where .5*(1c*xi) is a fit to
-    Omega_phi/Omegra_r
-*/
-class EXP ModifiedDoublePowerLaw: public BaseDistributionFunction{
-	const ModifiedDoublePowerLawParam par;  ///< parameters of DF
-	const double beta;              ///< auxiliary coefficient for the case of a central core
+
+/// Creates anisotropic flattened double-powe-law systems
+class EXP NewDoublePowerLaw: public BaseDistributionFunction{
+	const double sigmaJ;
+	const df::DoublePowerLaw DF0;
+	math::CubicSpline Jrcrit, Jzcrit;
+	double wt(const actions::Actions& J) const;
 	public:
-    /** Create an instance of double-power-law distribution function with given parameters
-        \param[in] params  are the parameters of DF
-        \throws std::invalid_argument exception if parameters are nonsense
-    */
-		ModifiedDoublePowerLaw(const ModifiedDoublePowerLawParam &params);
-
-    /** return value of DF for the given set of actions.
-        \param[in] J are the actions  */
-		virtual double value(const actions::Actions &J) const;
+		NewDoublePowerLaw(const DoublePowerLawParam& params,
+				  const potential::BasePotential& pot);
+		virtual double value(const actions::Actions& J) const;
 };
 
-/// Parameters that describe a sin double power law distribution function.
-struct SinDoublePowerLawParam{
-	double
-			norm,      ///< normalization factor with the dimension of mass
-			mass,      ///< mass
-			J0,        ///< break action (defines the transition between inner and outer regions)
-			Jcutoff,   ///< cutoff action (sets exponential suppression at J>Jcutoff, 0 to disable)
-			Jphi0,     ///< controls the steepness of rotation and the size of non-rotating core
-			Jcore,     ///< central core size for a Cole&Binney-type modified double-power-law halo
-			L0,        ///< helps define E surrogate jt
-			slopeIn,   ///< power-law index for actions below the break action (Gamma)
-			slopeOut,  ///< power-law index for actions above the break action (Beta)
-			cutoffStrength, ///< steepness of exponential suppression at J>Jcutoff (zeta)
-			alpha,     ///< helps define xi which goes 0 -> 1 inside -> out
-			beta,      ///< induces radial bias via sin
-			Fin,       ///< sets coeffs a,b that determin cL
-			Fout,      ///< reduces cost of low incl orbits
-			rotFrac;   ///< relative amplitude of the odd-Jphi component (-1 to 1, 0 means no rotation)
-	std::string Fname;
-	SinDoublePowerLawParam() :  ///< set default values for all fields (NAN means that it must be set manually)
-	    norm(NAN), mass(NAN), J0(NAN), Jcutoff(0), slopeIn(NAN), slopeOut(NAN), cutoffStrength(2),
-	    alpha(0.6), beta(NAN), Fin(NAN), Fout(NAN), Jphi0(0), rotFrac(0), Jcore(0) {}
-};
-
-class EXP SinDoublePowerLaw: public BaseDistributionFunction{
-	const SinDoublePowerLawParam par;  ///< parameters of DF
-	const double beta;              ///< auxiliary coefficient for the case of a central core
+// Creates anisotropic spheres
+class EXP NewOxford : public BaseDistributionFunction{
+	const NewOxfordParam par;  ///< parameters of DF
+	const potential::Interpolator freq;  ///< interface providing the epicyclic frequencies and Rcirc
 	public:
-    /** Create an instance of double-power-law distribution function with given parameters
-        \param[in] params  are the parameters of DF
-        \throws std::invalid_argument exception if parameters are nonsense
-    */
-		SinDoublePowerLaw(const SinDoublePowerLawParam &params);
+		NewOxford(const NewOxfordParam& _params,
+			  const potential::Interpolator& _freq) :
+		    par(_params), freq(_freq) {}
+		virtual double value(const actions::Actions &) const;
+		double h(const actions::Actions&) const;
+};
 
-    /** return value of DF for the given set of actions.
-        \param[in] J are the actions  */
-		virtual double value(const actions::Actions &J) const;
-		virtual void write_params(std::ofstream &strm,const units::InternalUnits &intUnits) const;
+//Creates Pascale-type dwarf spheroids: use by calling NewDwarfSpheroid
+class EXP DwarfSpheroid: public BaseDistributionFunction{
+	const DwarfSpheroidParam par;
+	public:
+		DwarfSpheroid(const DwarfSpheroidParam& _par);
+		virtual double value(const actions::Actions& J) const;
+};
+
+//Creates anistropic, flattened dSph systems
+class EXP NewDwarfSpheroid: public BaseDistributionFunction{
+	const DwarfSpheroidParam par;
+	const df::DwarfSpheroid DF0;
+	const double sigmaJ;
+	math::CubicSpline Jrcrit, Jzcrit;
+	double wt(const actions::Actions& J) const;
+	public:
+		NewDwarfSpheroid(const DwarfSpheroidParam& _par,
+				 const potential::BasePotential& pot);
+		virtual double value(const actions::Actions& J) const;
 };
 
 struct PlummerParam{
@@ -191,7 +197,6 @@ class EXP IsochroneDF : public BaseDistributionFunction{
 		virtual double value(const actions::Actions& J) const;
 		virtual void write_params(std::ofstream& stream,const units::InternalUnits& intUnits) const;
 };
-#include "Oxford.h"
 
 ///@}
 }  // namespace df

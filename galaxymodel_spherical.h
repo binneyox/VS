@@ -42,8 +42,6 @@
 #include "math_random.h"
 #include <string>
 
-#define EXP __declspec(dllexport)
-
 namespace galaxymodel{
 
 /** A combination of a spherical isotropic DF f(h) with a spherical potential.

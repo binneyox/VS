@@ -5,7 +5,6 @@
 */
 #pragma once
 #include "orbit.h"
-#define EXP __declspec(dllexport)
 
 namespace orbit {
 

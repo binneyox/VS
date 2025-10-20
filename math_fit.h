@@ -6,7 +6,6 @@
 #pragma once
 #include "math_base.h"
 #include "math_linalg.h"
-#define EXP __declspec(dllexport)
 
 namespace math{
 
@@ -134,5 +133,9 @@ EXP int findMinNdim(const IFunctionNdim& F, const double xinit[], const double x
 EXP int findMinNdimDeriv(const IFunctionNdimDeriv& F, const double xinit[], const double xstep,
     const double absToler, const int maxNumIter, double result[]);
 
-///@}
+EXP std::vector<double> fitPoly(const int, const std::vector<double>&,
+				const std::vector<double>&);
+EXP double evalPoly(const std::vector<double>&, const double x);
+
+	///@}
 }  // namespace

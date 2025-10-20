@@ -12,6 +12,7 @@ This module provides code to facilitate interaction with observations.
 
 */
 #pragma once
+#include "os.h"
 
 namespace obs {
 
@@ -53,14 +54,7 @@ EXP PosVelSky from_RAdec(PosVelSky p);//p in ra dec of course
 EXP PosVelSky to_RAdec(double l,double b,double mul,double mub);
 EXP PosVelSky to_RAdec(PosSky lb,VelSky pm);
 EXP PosVelSky to_RAdec(PosVelSky pv);
-/*
-EXP PosVelSky from_muRAdec(double ra,double dec,double mura,double mudec);
-EXP PosVelSky from_muRAdec(PosSky radec,VelSky pmradec);
-EXP PosVelSky from_muRAdec(PosVelSky p);//p in ra dec of course
-EXP PosVelSky to_muRAdec(double l,double b,double mul,double mub);
-EXP PosVelSky to_muRAdec(PosSky lb,VelSky pm);
-EXP PosVelSky to_muRAdec(PosVelSky pv);
-*/
+
 /* Class to convert obs coords (l,b in deg, mu in mas/yr, s in kpc,
  * Vlos in km/s) into 6d Galactocentric phase space coords in int units
  * and back. Sun's Galactocentric phase-space coords (if specified) should be in Kpc &

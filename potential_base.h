@@ -5,10 +5,9 @@
 */
 #pragma once
 #include "coord.h"
-#define EXP __declspec(dllexport)
 
 /** Classes and auxiliary routines related to creation and manipulation of 
-    density models and gravitational potential models.
+    density model and gravitational potential models.
 
     These two concepts are related in such a way that a density model does not need 
     to provide potential and forces, while a potential model does. 
@@ -140,6 +139,10 @@ public:
         eval(point, &val);
         return val;
     }
+    std::vector<double> cJcrit;
+    virtual void setJzcrit(std::vector<double>& _cJcrit){
+	    cJcrit = _cJcrit;
+    };
 
 protected:
     /** evaluate potential and up to two its derivatives in cartesian coordinates;
@@ -226,7 +229,9 @@ class EXP BasePotentialCyl: public BasePotential, coord::IScalarFunction<coord::
     virtual double densityCar(const coord::PosCar &pos) const
     {  return densityCyl(toPosCyl(pos)); }
     virtual double densitySph(const coord::PosSph &pos) const
-    {  return densityCyl(toPosCyl(pos)); }
+		    {  return densityCyl(toPosCyl(pos)); }
+//    virtual void setJzcrit(std::vector<double> _cJcrit& spl){
+//	    cJcrit = _cJcrit;}
 };  // class BasePotentialCyl
 
 

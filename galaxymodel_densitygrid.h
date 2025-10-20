@@ -9,7 +9,6 @@
 #include "galaxymodel_target.h"
 #include <vector>
 #include <string>
-#define EXP __declspec(dllexport)
 
 namespace galaxymodel{
 

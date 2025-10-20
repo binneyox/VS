@@ -6,7 +6,6 @@
 #pragma once
 #include "potential_base.h"
 #include "math_spline.h"
-#define EXP __declspec(dllexport)
 
 namespace potential{
 

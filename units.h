@@ -5,7 +5,7 @@
 */
 
 #pragma once
-#define EXP __declspec(dllexport)
+#include "os.h"
 
 /** Unit systems
 
@@ -217,8 +217,8 @@ struct EXP ExternalUnits {
     const double timeUnit;     ///< time unit of the external dataset, expressed in internal units
 
     /// construct a trivial converter, for the case that no conversion is actually needed
-    ExternalUnits() :
-        lengthUnit(1.), velocityUnit(1.), massUnit(1.), timeUnit(1.) {};
+    ExternalUnits(void) :
+        lengthUnit(1.), velocityUnit(1.), massUnit(1.), timeUnit(1.) {}
 
     /** construct a converter for the given internal unit system and specified external units,
         the latter expressed in CGS unit system using the constants defined in this header file */
@@ -226,6 +226,8 @@ struct EXP ExternalUnits {
         lengthUnit  (unit.from_pc   * _lengthUnit / pc), 
         velocityUnit(unit.from_kms  * _velocityUnit / kms), 
         massUnit    (unit.from_Msun * _massUnit / Msun),
-        timeUnit    (lengthUnit / velocityUnit) {};
+	timeUnit    (lengthUnit / velocityUnit) {
+	    printf("Units: L V M T: %g %g %g %g\n",lengthUnit,velocityUnit,massUnit,timeUnit);
+    }
 };
 }  // namespace units

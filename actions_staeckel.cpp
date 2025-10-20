@@ -208,7 +208,7 @@ class AxisymIntegrand: public math::IFunctionNoDeriv {
 			if(c==cminus1)
 				result /= tau;
 			if(!isFinite(result))
-				result=1;  // ad hoc fix to avoid problems at the boundaries of integration interval
+				result=0;  // ad hoc fix to avoid problems at the boundaries of integration interval
 			return result;
 		}
 
@@ -672,7 +672,7 @@ void createGridFocalDistance(
     std::string errorMessage;  // store the error text in case of an exception in the openmp block
     // loop over the grid in E and L (combined index for better load balancing)
 #ifdef _OPENMP
-//#pragma omp parallel for schedule(dynamic)
+#pragma omp parallel for schedule(dynamic)
 #endif
     for(int iEL = 0; iEL < sizeEL; iEL++) {
         try{
@@ -1012,7 +1012,8 @@ EXP double ActionFinderAxisymFudge::focalDistance(const coord::PosVelCyl& point)
     return fmax(0, interpD.value(xi, chi));
 }
 
-EXP math::Matrix<double> FDfinder::derivs(double u,double Delta,double* p2,double* p2prime){
+EXP math::Matrix<double> FDfinder::derivs(double u,double Delta, double& d2p2du2,
+					  double* p2,double* p2prime){
 	double sh=sinh(u), ch=cosh(u), u0=asinh(Rsh/Delta);
 	double R=Delta*sh, R2=R*R, Delta2=pow_2(Delta);
 	double P;
@@ -1028,6 +1029,7 @@ EXP math::Matrix<double> FDfinder::derivs(double u,double Delta,double* p2,doubl
 	double pu0=Delta*cosh(u0)*vR;
 	if(p2!=NULL) *p2=pow_2(pu0)+X-2*(EmP0*pow_2(Rsh)-Delta2*P0);
 	double dp2du=dXdR*Delta*ch;
+	d2p2du2 = d2XdR2*pow_2(Delta*ch)+dXdR*Delta*sh;
 	if(p2prime!=NULL) *p2prime=dp2du;
 	double dp2dDelta=2*pu0*vR/cosh(u0) + dXdR*sh + dXdDelta + 4*Delta*P0;
 	double dp2primedu=d2XdR2*pow_2(Delta*ch)+dXdR*Delta*sh;
@@ -1038,12 +1040,12 @@ EXP math::Matrix<double> FDfinder::derivs(double u,double Delta,double* p2,doubl
 	return M;
 }
 
-EXP double FDfinder::bestFD(double &umin){//implements N-R search for p_u^2=dp_u^2/du=0
+EXP double FDfinder::bestFD(double& umin, double& d2p2du2){//implements N-R search for p_u^2=dp_u^2/du=0
 	double u=asinh(.8*Rsh/Delta0), u0=asinh(Rsh/Delta0), pu0=vR*Delta0*cosh(u0);
 	double p2=1, p2prime=1, Delta=Delta0, fac=1;
 	int i=0;
 	while(i<20 && (fabs(p2)>1e-4 || fabs(p2prime)>1e-4)){
-		math::Matrix<double> M0(derivs(u,Delta,&p2,&p2prime));
+		math::Matrix<double> M0(derivs(u,Delta,d2p2du2,&p2,&p2prime));
 		double det=M0(0,0)*M0(1,1)-M0(1,0)*M0(0,1);
 		double dY0 = ( M0(1,1)*p2-M0(0,1)*p2prime)/det;
 		double dY1 = (-M0(1,0)*p2+M0(0,0)*p2prime)/det;

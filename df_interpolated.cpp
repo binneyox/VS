@@ -34,7 +34,8 @@ public:
     DFscaled(const BaseDistributionFunction &_df, const BaseActionSpaceScaling &_scaling) :
         df(_df), scaling(_scaling) {}
     virtual void eval(const double vars[], double values[]) const {
-        values[0] = df.value(scaling.toActions(vars));
+	    double Jzc = 0;//correct for spherical or disc DF
+        values[0] = df.value(scaling.toActions(vars), Jzc);
     }
     virtual unsigned int numVars()   const { return 3; }
     virtual unsigned int numValues() const { return 1; }

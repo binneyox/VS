@@ -5,7 +5,6 @@
 **/
 #pragma once
 #include "potential_base.h"
-#define EXP __declspec(dllexport)
 
 namespace potential {
 

@@ -11,9 +11,8 @@
 */
 
 #pragma once
+#include "os.h"
 #include <vector>
-#define EXP __declspec(dllexport)
-
 
 namespace math{
 

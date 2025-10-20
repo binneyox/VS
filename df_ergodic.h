@@ -10,7 +10,6 @@
 #include <fstream>
 #include <iostream>
 #include <vector>
-#define EXP __declspec(dllexport)
 
 namespace df{
 class EXP ergodicDF: public math::IFunctionNoDeriv{

@@ -4,8 +4,6 @@
 #include <stdexcept>
 #include <cmath>
 
-#define EXP __declspec(dllexport)
-
 namespace actions{
 
 /// number of sampling points for a shell orbit (equally spaced in time)

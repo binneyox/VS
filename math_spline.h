@@ -84,7 +84,6 @@ In the 3d case, the amplitudes are directly used with a cubic (N=3) 3d B-spline 
 #pragma once
 #include "math_base.h"
 #include "math_linalg.h"
-#define EXP __declspec(dllexport)
 
 namespace math{
 

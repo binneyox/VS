@@ -3,8 +3,6 @@
 #include <fstream>
 #include <stdexcept>
 
-#define EXP __declspec(dllexport)
-
 namespace utils {
 
 // -------- KeyValueMap -------- //

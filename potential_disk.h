@@ -68,7 +68,6 @@ is provided in potential_factory.h, taking the name of parameter file and the Un
 #include "potential_base.h"
 #include "smart.h"
 #include <vector>
-#define EXP __declspec(dllexport)
 
 namespace potential{
 

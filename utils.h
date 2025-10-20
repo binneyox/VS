@@ -4,10 +4,9 @@
     \date    2009-2016
 */
 #pragma once
+#include "os.h"
 #include <string>
 #include <vector>
-
-#define EXP __declspec(dllexport)
 
 /** Helper routines for string handling, logging and miscellaneous other tasks.  */
 namespace utils {

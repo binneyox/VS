@@ -17,7 +17,7 @@
 #include <string>
 #include <vector>
 #include <utility>
-#define EXP __declspec(dllexport)
+#include "os.h"
 
 namespace utils {
 

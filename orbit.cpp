@@ -4,7 +4,6 @@
 #include "math_core.h"
 #include <stdexcept>
 #include <cmath>
-#define EXP __declspec(dllexport)
 
 namespace orbit{
 

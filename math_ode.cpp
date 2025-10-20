@@ -2,7 +2,6 @@
 #include <cmath>
 #include <stdexcept>
 #include "alloca.h"
-#define EXP __declspec(dllexport)
 
 namespace math{
 

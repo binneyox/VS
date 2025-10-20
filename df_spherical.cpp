@@ -10,8 +10,6 @@
 #include <algorithm>
 #include <fstream>
 
-#define EXP __declspec(dllexport)
-
 namespace df{
 
 namespace{

@@ -8,7 +8,6 @@
 #include "potential_utils.h"
 #include "math_spline.h"
 #include "smart.h"
-#define EXP __declspec(dllexport)
 
 namespace actions {
 
@@ -22,7 +21,6 @@ namespace actions {
 EXP Actions actionsSpherical(
 			     const potential::BasePotential& potential,
 			     const coord::PosVelCyl& point);
-
 EXP Actions actionsSpherical(
 			     const potential::BasePotential& potential,
 			     const coord::PosMomCyl& point);
@@ -35,6 +33,9 @@ EXP Actions actionsSpherical(
     \throw      std::invalid_argument exception if the potential is not spherical
     or some other error occurs.
 */ 
+EXP ActionAngles actionAnglesSpherical(
+    const potential::BasePotential& pot, const coord::PosVelCyl& point, Frequencies* freqout);
+    
 EXP ActionAngles actionAnglesSpherical(
     const potential::BasePotential& potential,
     const coord::PosMomCyl& point,
@@ -92,5 +93,5 @@ private:
 };
 
 typedef ActionFinderSpherical ToyMapSpherical;
-
+EXP void mapHJr(const potential::BasePotential &pot,math::QuinticSpline2d& intJr,math::QuinticSpline2d& intE);
 }  // namespace actions

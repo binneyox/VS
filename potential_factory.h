@@ -20,7 +20,6 @@
 #include "units.h"
 #include "utils_config.h"
 #include <string>
-#define EXP __declspec(dllexport)
 
 namespace potential {
 

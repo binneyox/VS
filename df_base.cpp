@@ -6,8 +6,6 @@
 #include <stdexcept>
 #include <fstream>
 
-#define EXP __declspec(dllexport)
-
 namespace df{
 
 /// convert from scaled variables to the actual actions to be passed to DF
@@ -97,10 +95,11 @@ public:
     /// output a single value (DF multiplied by the jacobian of scaling transformation)
     virtual void eval(const double vars[], double values[]) const
     {
-        double jac;  // will be initialized by the following call
+	    double jac;  // will be initialized by the following call
+	    double Jzc = 0;//Is correct for spherical Phi or disc DF
         const actions::Actions act = scaling.toActions(vars, &jac);
         if(jac!=0) {
-            double val = df.value(act);
+            double val = df.value(act, Jzc);
             if(!isFinite(val))
                 val = 0;
             if(LogTerm && val>0)

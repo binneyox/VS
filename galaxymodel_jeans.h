@@ -17,8 +17,6 @@
 #include "potential_base.h"
 #include "math_spline.h"
 
-#define EXP __declspec(dllexport)
-
 namespace galaxymodel{
 
 /** Solve the Jeans equation for a spherical model with the given density and potential,

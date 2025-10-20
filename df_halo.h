@@ -13,7 +13,6 @@
 #include "actions_newtorus.h"
 #include <fstream>
 #include <cmath>
-#define EXP __declspec(dllexport)
 
 namespace df{
 
@@ -29,7 +28,7 @@ struct DoublePowerLawParam{
 			Jcutoff,   ///< cutoff action (sets exponential suppression at J>Jcutoff, 0 to disable)
 			Jphi0,     ///< controls the steepness of rotation and the size of non-rotating core
 			Jcore,     ///< central core size for a Cole&Binney-type modified double-power-law halo
-			sigmaJ,    ///< parameter setting size of region where df/dJz=df/dJphi et 
+			epsilonJ,    ///< parameter setting size of region where df/dJz=df/dJphi et 
 			slopeIn,   ///< power-law index for actions below the break action (Gamma)
 			slopeOut,  ///< power-law index for actions above the break action (Beta)
 			steepness, ///< steepness of the transition between two asymptotic regimes (eta)
@@ -41,9 +40,9 @@ struct DoublePowerLawParam{
 			rotFrac;   ///< relative amplitude of the odd-Jphi component (-1 to 1, 0 means no rotation)
 	std::string Fname;
 	DoublePowerLawParam() :  ///< set default values for all fields (NAN means that it must be set manually)
-	    norm(NAN), J0(NAN), Jcutoff(1e6), Jphi0(0), Jcore(0), sigmaJ(100), 
+	    norm(NAN), J0(NAN), Jcutoff(1e6), Jphi0(NAN), Jcore(0), epsilonJ(NAN), 
 	    slopeIn(NAN), slopeOut(NAN), steepness(1), cutoffStrength(2),
-	    coefJrIn(1), coefJzIn(1), coefJrOut(1), coefJzOut(1), rotFrac(0) {}
+	    coefJrIn(1.5), coefJzIn(1), coefJrOut(1.3), coefJzOut(1), rotFrac(0) {}
 };
 
 // Parameters of DSph DF introduced by Pascale+
@@ -52,12 +51,16 @@ struct DwarfSpheroidParam{
 			norm,
 			mass,
 			J0,
+			Jphi0,
+			epsilonJ,
 			alpha,
-			rotFrac,
-			Jphi,
-			sigmaJ;
+			coefJr,
+			coefJz,
+			rotFrac;
+	std::string Fname;
 	DwarfSpheroidParam() :
-	    norm(1), J0(NAN), alpha(.25), rotFrac(0), Jphi(1), sigmaJ(100) {} 
+	    norm(1), J0(NAN), Jphi0(NAN), epsilonJ(NAN), alpha(.25),
+	    coefJr(1.5), coefJz(1), rotFrac(0) {} 
 };
 
 /** General double power-law model.
@@ -92,7 +95,7 @@ class EXP DoublePowerLaw: public BaseDistributionFunction{
 
     /** return value of DF for the given set of actions.
         \param[in] J are the actions  */
-		virtual double value(const actions::Actions &J) const;
+		virtual double value(const actions::Actions &J, const double Jzcrit) const;
 };
 
 /// Parameters of f(J_r,L) that delivers anisotropic double-power-law
@@ -109,27 +112,25 @@ struct NewOxfordParam{
 			slopeOut,
 			steepness,
 			beta,
-			kIn,
 			rotFrac,
 			cutoffStrength;
 	std::string Fname;
 	NewOxfordParam() :  ///< set default values for all fields (NAN means that it must be set manually)
 	    norm(1), mass(NAN), J0(NAN), Jcutoff(1e6), Jphi0(0), Jcore(0),
-	    slopeIn(NAN), slopeOut(NAN), steepness(1), beta(0), kIn(0),
+	    slopeIn(NAN), slopeOut(NAN), steepness(1), beta(0),
 	    rotFrac(0), cutoffStrength(2) {}
 };
 
 
 /// Creates anisotropic flattened double-powe-law systems
 class EXP NewDoublePowerLaw: public BaseDistributionFunction{
-	const double sigmaJ;
+	const double epsilonJ;
 	const df::DoublePowerLaw DF0;
-	math::CubicSpline Jrcrit, Jzcrit;
 	double wt(const actions::Actions& J) const;
 	public:
 		NewDoublePowerLaw(const DoublePowerLawParam& params,
 				  const potential::BasePotential& pot);
-		virtual double value(const actions::Actions& J) const;
+		virtual double value(const actions::Actions& J, const double Jzcrit) const;
 };
 
 // Creates anisotropic spheres
@@ -140,7 +141,7 @@ class EXP NewOxford : public BaseDistributionFunction{
 		NewOxford(const NewOxfordParam& _params,
 			  const potential::Interpolator& _freq) :
 		    par(_params), freq(_freq) {}
-		virtual double value(const actions::Actions &) const;
+		virtual double value(const actions::Actions &, const double Jzcrit) const;
 		double h(const actions::Actions&) const;
 };
 
@@ -149,20 +150,19 @@ class EXP DwarfSpheroid: public BaseDistributionFunction{
 	const DwarfSpheroidParam par;
 	public:
 		DwarfSpheroid(const DwarfSpheroidParam& _par);
-		virtual double value(const actions::Actions& J) const;
+		virtual double value(const actions::Actions& J, const double Jzcrit) const;
 };
 
 //Creates anistropic, flattened dSph systems
 class EXP NewDwarfSpheroid: public BaseDistributionFunction{
 	const DwarfSpheroidParam par;
 	const df::DwarfSpheroid DF0;
-	const double sigmaJ;
-	math::CubicSpline Jrcrit, Jzcrit;
+	const double epsilonJ;
 	double wt(const actions::Actions& J) const;
 	public:
 		NewDwarfSpheroid(const DwarfSpheroidParam& _par,
 				 const potential::BasePotential& pot);
-		virtual double value(const actions::Actions& J) const;
+		virtual double value(const actions::Actions& J, const double Jzcrit) const;
 };
 
 struct PlummerParam{
@@ -179,7 +179,7 @@ class EXP PlummerDF : public BaseDistributionFunction{
 	math::LinearInterpolator cls;
 	public:
 		PlummerDF(const PlummerParam&);
-		virtual double value(const actions::Actions& J) const;
+		virtual double value(const actions::Actions& J, const double Jzcrit) const;
 		virtual void write_params(std::ofstream&, const units::InternalUnits&) const;
 };
 
@@ -194,7 +194,7 @@ class EXP IsochroneDF : public BaseDistributionFunction{
 	double norm;
 	public:
 		IsochroneDF(const IsochroneParam& params);
-		virtual double value(const actions::Actions& J) const;
+		virtual double value(const actions::Actions& J, const double Jzcrit) const;
 		virtual void write_params(std::ofstream& stream,const units::InternalUnits& intUnits) const;
 };
 

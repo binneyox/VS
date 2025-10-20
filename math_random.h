@@ -4,9 +4,9 @@
     \author Eugene Vasiliev
 */
 #pragma once
+#include "os.h"
 #include <cstddef>    // for NULL
 #include <stdint.h>   // for uint64_t
-#define EXP __declspec(dllexport)
 
 namespace math{
 

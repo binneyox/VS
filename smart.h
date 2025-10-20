@@ -131,7 +131,7 @@ class PhaseVolume;
 /// shared pointer to a density object
 typedef shared_ptr<const BaseDensity>   PtrDensity;
 /// shared pointer to a potential object
-typedef shared_ptr<const BasePotential> PtrPotential;
+typedef shared_ptr<BasePotential> PtrPotential;
 /// shared pointer to an instance of OblatePerfectEllipsoid potential
 typedef shared_ptr<const OblatePerfectEllipsoid> PtrOblatePerfectEllipsoid;
 /// shared pointer to a PhaseVolume object

@@ -5,7 +5,6 @@
 */
 #pragma once
 #include "math_linalg.h"
-#define EXP __declspec(dllexport)
 
 namespace math{
 

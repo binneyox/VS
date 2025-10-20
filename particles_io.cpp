@@ -7,8 +7,6 @@
 #include <stdexcept>
 #include "utils.h"
 
-#define EXP __declspec(dllexport)
-
 namespace particles {
 
 namespace{  // internal

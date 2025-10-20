@@ -24,7 +24,6 @@
 #include "potential_base.h"
 #include "potential_utils.h"
 #include "math_spline.h"
-#define EXP __declspec(dllexport)
 
 namespace actions {
 
@@ -103,7 +102,8 @@ EXP std::vector<coord::PosVelCyl> toTop(
     the variation of `lambda` coordinate for this orbit
     If the best-fit value is negative, it is replaced with zero.
 */
-EXP double fitFocalDistanceShellOrbit(const std::vector<std::pair<coord::PosVelCyl,double> >& traj);
+EXP double fitFocalDistanceShellOrbit(const std::vector<std::pair<coord::PosVelCyl,
+				      double> >& traj);
 
 /// function to be used in root-finder for locating the thin orbit in R-z plane
 class EXP FindRzClosedOrbitV: public math::IFunction {

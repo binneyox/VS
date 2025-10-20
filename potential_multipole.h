@@ -47,7 +47,6 @@
 #include "particles_base.h"
 #include "math_sphharm.h"
 #include "smart.h"
-#define EXP __declspec(dllexport)
 
 namespace potential {
 

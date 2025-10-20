@@ -7,7 +7,6 @@
 #include "coord.h"
 #include <vector>
 #include <utility>
-#define EXP __declspec(dllexport)
 
 namespace math {
 

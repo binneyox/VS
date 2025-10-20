@@ -43,25 +43,25 @@ class EXP BaseLos{
 		}
 		virtual double sMod_H(const coord::PosVelCyl) const=0;//m-M including A
 		virtual double reduc_H(const coord::PosVelCyl) const=0;//m-M from A only
-		double A_V(const double sKpc) const{
+		double A_V(const double s) const{
 			if(!dm) return 0;
 			else{
 				double A,dA;
-				extinct.evalDeriv(sKpc,&A,&dA);
+				extinct.evalDeriv(s,&A,&dA);
 				return A;
 			}
 		}
-		double A_B(const double sKpc) const{
-			return 1.324 * A_V(sKpc);
+		double A_B(const double s) const{
+			return 1.324 * A_V(s);
 		}
-		double A_R(const double sKpc) const{
-			return 0.748 * A_V(sKpc);
+		double A_R(const double s) const{
+			return 0.748 * A_V(s);
 		}
-		double A_H(const double sKpc) const{
-			return 0.175 * A_V(sKpc);
+		double A_H(const double s) const{
+			return 0.175 * A_V(s);
 		}
-		double A_K(const double sKpc) const{
-			return 0.112 * A_V(sKpc);
+		double A_K(const double s) const{
+			return 0.112 * A_V(s);
 		}
 		virtual double start() const{
 			printf("Erroneous call to start\n");

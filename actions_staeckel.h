@@ -19,7 +19,6 @@ but virtually nothing of the original code remains.
 #include "actions_base.h"
 #include "actions_focal_distance_finder.h"
 #include "smart.h"
-#define EXP __declspec(dllexport)
 
 namespace actions {
 
@@ -197,8 +196,9 @@ class EXP FDfinder{
 			P0=pot->value(coord::PosCyl(Rsh,0,0));
 			EmP0=E-P0;
 		}
-		math::Matrix<double> derivs(double u,double Delta,double* p2=NULL,double* p2prime=NULL);
-		double bestFD(double&);
+		math::Matrix<double> derivs(double u,double Delta,double& d2p2du2,
+					    double* p2=NULL,double* p2prime=NULL);
+		double bestFD(double&, double&);
 };
 
 ///@}

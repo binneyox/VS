@@ -7,7 +7,6 @@
 #pragma once
 #include "math_base.h"
 #include "math_spline.h"
-#define EXP __declspec(dllexport)
 
 namespace math{
 

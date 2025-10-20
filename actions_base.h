@@ -5,7 +5,6 @@
 */
 #pragma once
 #include "coord.h"
-#define EXP __declspec(dllexport)
 
 /** Classes and routines for transformations between position/velocity and action/angle phase spaces */
 namespace actions {
@@ -168,21 +167,9 @@ private:
 
 /** Base class for toy maps used in torus machinery, which provide conversion from action/angle
     to coordinate/momentum variables, and also provide the derivatives of this transformation */
-template <typename CoordT>
-class BaseToyMap{
+/*class BaseToyMap{
 public:
     virtual ~BaseToyMap() {};
-
-    /** Convert from action/angles to position/velocity, optionally computing the derivatives;
-        if any of the output arguments is NULL, it is not computed.
-        \param[in]  actAng are the action/angles;
-        \param[out] freq   are the frequencies;
-        \param[out] derivAct are the derivatives of pos/vel w.r.t three actions;
-        \param[out] derivAng are the derivatives of pos/vel w.r.t three actions;
-        \param[out] derivParam are the derivatives of pos/vel w.r.t the parameters of toy potential:
-                    if not NULL, must point to an array of length `numParams()`;
-        \return     pos/vel coordinates.
-    */
     virtual coord::PosMomT<CoordT> map(
         const ActionAngles& actAng,
         Frequencies* freq=NULL,
@@ -190,16 +177,57 @@ public:
         DerivAng<CoordT>* derivAng=NULL,
         coord::PosMomT<CoordT>* derivParam=NULL) const = 0;
 };
-
+//*/
 /** Base class for point transformations that map canonically conjugate coordinate/momentum
-    in some intrinsic coord system into position/velocity in cylindrical coordinates */
-template <typename CoordT>
-class BasePointTransform{
+    in some intrinsic coord system into position/momentum in cylindrical coordinates */
+
+class EXP BasePointTransform{
 public:
     virtual ~BasePointTransform() {};
-    /** convert from coordinate/momentum in the intrinsic template coordinate system
-        to position/velocity in cylindrical coordinates */
-    virtual coord::PosVelCyl map(const coord::PosVelT<CoordT> &point) const = 0;
+    /** maps in both given coordinate system (either cylindrical or spherical) and other coordinate system. 
+    In other coordinate system there is the usual transformation from spherical or cylindrical to given coordinate system
+    before mapping*/
+    virtual coord::PosMomCyl map(const coord::PosMomCyl &point) const=0;
+    virtual coord::PosMomCyl map(const coord::PosMomSph &point) const=0;
+    /*map as well as derivates of transformated phase space point w.r.t original phase space point. 
+    Note derivative is always in given coordinate system*/
+    virtual coord::PosMomCyl map(const coord::PosMomCyl &point, math::Matrix<double>& dRzdrt) const=0;
+    virtual coord::PosMomCyl map(const coord::PosMomSph &point, math::Matrix<double>& dRzdrt) const=0;
+    //reverse map.
+    virtual coord::PosMomCyl revmap(const coord::PosMomCyl &point) const=0;
+    virtual coord::PosMomSph revmapSph(const coord::PosMomCyl &point) const=0;
+    //Gives parameters and/or fourier series.
+    virtual void getParams(double* params=NULL, double* Fr=NULL, double* Fz=NULL) const=0;
+    //Name of PT:either Harmonic oscillator or Isochrone
+    virtual const char* name() const=0;
+    //gives number of parameters for Point Transformation not counting fourier series.
+    virtual int numParams() const=0;
+    //number of coefficients in fourier series expansion inr r.
+    virtual int FourierSizer() const=0;
+    //number of coefficients in fourier series expansion in v.
+    virtual int FourierSizez() const=0;
 };
-
+typedef std::shared_ptr<const BasePointTransform> PtrPointTransform;
+enum ToyPotType {None, Is, HO};
+class EXP BaseToyMap{
+    public:
+    virtual ~BaseToyMap() {};
+    virtual Actions pq2J(const coord::PosMomCyl Rzp) const=0;
+    virtual ActionAngles pq2aa(const coord::PosMomCyl& Rz) const=0;
+    virtual coord::PosMomCyl from_aaT(const ActionAngles& aaT) const=0;
+    virtual coord::PosMomCyl from_aaT(const Actions& J, const Angles& theta) const=0;
+    virtual coord::PosMomCyl from_aaT(const ActionAngles& aaT, DerivAct<coord::Cyl>& dRzdJ) const=0;
+    virtual coord::PosMomCyl from_aaT(const ActionAngles& aaT, DerivAng<coord::Cyl>& dRzdT) const=0;
+    virtual coord::PosMomCyl from_aaT(const Actions& J, const Angles& theta, DerivAct<coord::Cyl>& dRzdJ) const=0;
+    virtual coord::PosMomCyl from_aaT(const Actions& J, const Angles& theta, DerivAng<coord::Cyl>& dRzdt) const=0;
+	//returns number of parameters in point transformation
+    virtual PtrPointTransform getPointTrans() const=0;
+    virtual ToyPotType getToyMapType() const=0;
+	virtual int PTParamSize() const =0;
+	virtual int potParamSize() const=0;
+	virtual const char* name() const=0;
+    // Gets parameters of Toy potential. For isochrone x=Js, y=b. For HO x=omegar, y=omegaz; 
+    virtual void getParams(double* x=NULL,double* y=NULL) const=0;
+};
+typedef std::shared_ptr<const BaseToyMap> PtrToyMap;
 }  // namespace action

@@ -8,10 +8,10 @@
 #include "utils.h"
 #include "actions_base.h"
 #include "units.h"
+#include "potential_base.h"
 #include <fstream>
 #include <iostream>
 #include <vector>
-#define EXP __declspec(dllexport)
 
 /** Classes for dealing with action-base distribution functions */
 namespace df{
@@ -47,19 +47,19 @@ public:
     }
     
     /** Value of distribution function for the given set of actions J */
-    virtual double value(const actions::Actions &J) const=0;
+    virtual double value(const actions::Actions &J, const double Jrcrit) const=0;
 
     /** Number of components in the case of a multi-component DF */
     virtual unsigned int numValues() const { return 1; }
 
     /** Compute values of all components for the given actions */
-    virtual void eval(const actions::Actions &J, double values[]) const {
-	    *values = value(J);
+    virtual void eval(const actions::Actions &J, const double Jrcrit, double values[]) const {
+	    *values = value(J, Jrcrit);
     }
 
     /** Compute values of all components for the given actions */
-    virtual void wthSF(const actions::Actions &J, double values[], double Bright, double Faint) const {
-	    *values = value(J);
+    virtual void wthSF(const actions::Actions &J, const double Jrcrit, double values[], double Bright, double Faint) const {
+	    *values = value(J, Jrcrit);
     }
 
     virtual void set_norm(double){std::cout << "set_norm not defined\n";}
@@ -83,12 +83,14 @@ public:
     /* Multiply previously determined f(J) by fraction of pop
      * conributing to data 
     */
-    virtual void withSF(const actions::Actions &J, double values[], double Bright, double Faint) const {
-	    *values = value(J) * fraction(Bright, Faint);
+    virtual void withSF(const actions::Actions &J, const double Jrcrit,
+			double values[], double Bright, double Faint) const {
+	    *values = value(J, Jrcrit) * fraction(Bright, Faint);
     }
 
-    virtual void withLF(const actions::Actions &J, double values[], double Mag) const {
-	    *values = value(J) * LF(Mag);
+    virtual void withLF(const actions::Actions &J, const double Jrcrit,
+			double values[], double Mag) const {
+	    *values = value(J, Jrcrit) * LF(Mag);
     }
 
     /* Randomly choose from LF an abs magnitude in the given range

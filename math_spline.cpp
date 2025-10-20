@@ -15,8 +15,6 @@
 #include <stdexcept>
 #include <iostream>
 
-#define EXP __declspec(dllexport)
-
 namespace math {
 
 namespace {
@@ -49,6 +47,17 @@ inline double linInt(const double x, const double grid[], int size, int i1, int 
     } else {
         return (x-x1) / (x2-x1);
     }
+}
+
+/// check that array is monotone increasing or decreasing
+inline bool isMonotonic(const std::vector<double>& arr){
+	double da = arr[1]-arr[0];
+	if(da == 0) return false;
+	if(da > 0) for(int i=1; i<arr.size()-1; i++)
+		if(arr[i+1]-arr[i] <= 0) return false;
+	if(da < 0) for(int i=1; i<arr.size()-1; i++)
+			if(arr[i+1]-arr[i] >= 0) return false;
+	return true;
 }
 
 /** Compute the values of B-spline functions used for 1d interpolation.
@@ -382,7 +391,10 @@ std::vector<double> constructCubicSpline(const std::vector<double>& xval,
 {
     const size_t numPoints = xval.size();
     if(fval.size() != numPoints)
-        throw std::length_error("CubicSpline: input arrays are not equal in length");
+	    throw std::length_error("CubicSpline: input arrays are not equal in length");
+    if(!isMonotonic(xval)){
+	    printf("CubicSpline: xvals not monotonic\n"); exit(0);
+    }
 
     // construct and solve the linear system for first derivatives
     std::vector<double> rhs(numPoints);

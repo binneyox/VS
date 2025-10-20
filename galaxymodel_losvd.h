@@ -8,8 +8,6 @@
 #include "math_geometry.h"
 #include "galaxymodel_target.h"
 
-#define EXP __declspec(dllexport)
-
 namespace galaxymodel{
 
 /** Definition of a Gaussian point-spread function with the given width and amplitude */

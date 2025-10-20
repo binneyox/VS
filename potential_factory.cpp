@@ -13,6 +13,7 @@
 #include "math_core.h"
 #include "utils.h"
 #include "utils_config.h"
+#include "actions_newtorus.h"
 #include <cmath>
 #include <cassert>
 #include <stdexcept>
@@ -744,10 +745,10 @@ PtrPotential readPotential(const std::string& fileName, const units::ExternalUni
         std::vector<std::string> fields;
         fields = utils::splitString(buffer, "# \t");
         if(fields[0] == Multipole::myName()) {
-            return readPotentialMultipole(strm, converter);
+            return readPotentialMultipole(strm, converter);//**fix to add setJzcrit
         }
         if(fields[0] == CylSpline::myName()) {
-            return readPotentialCylSpline(strm, converter);
+            return readPotentialCylSpline(strm, converter);//**fix to add setJzcrit
         }
         if(fields[0] == CompositeCyl::myName()) {
             // each line is a name of a file with the given component
@@ -755,9 +756,14 @@ PtrPotential readPotential(const std::string& fileName, const units::ExternalUni
             // extract the path from the filename, and append it to all dependent filenames
             std::string prefix = idx != std::string::npos ? fileName.substr(0, idx+1) : "";
             std::vector<PtrPotential> components;
-            while(std::getline(strm, buffer).good() && !strm.eof())
-                components.push_back(readPotential(prefix+buffer, converter));
-            return PtrPotential(new CompositeCyl(components));
+            while(std::getline(strm, buffer).good() && !strm.eof()){
+		    components.push_back(readPotential(prefix+buffer, converter));
+		    printf("Pot cpt read\n");
+	    }
+	    CompositeCyl* ptl = new CompositeCyl (components);
+	    std::vector<double> cJcrit(actions::mapJcrit(*ptl));
+	    ptl->setJzcrit(cJcrit);
+	    return PtrPotential(ptl);
         }
     }
     throw std::runtime_error("readPotential: cannot find valid potential coefficients in file "+fileName);
@@ -1016,17 +1022,32 @@ namespace {
 PtrPotential createPotentialFromParticles(const AllParam& param,
     const particles::ParticleArray<coord::PosCyl>& particles)
 {
+	if(param.potentialType != PT_MULTIPOLE && param.potentialType != PT_CYLSPLINE){
+		printf("createPotentialFromParticles: Invalid potential type\n");
+		exit(0);
+	}
+	PtrPotential ptl = param.potentialType == PT_MULTIPOLE?
+			   Multipole::create(particles, param.symmetryType, param.lmax, param.mmax,
+					     param.gridSizeR, param.rmin, param.rmax, param.smoothing)
+			   :
+			   CylSpline::create(particles, param.symmetryType, param.mmax,
+					     param.gridSizeR, param.rmin, param.rmax,
+					     param.gridSizez, param.zmin, param.zmax);
+	std::vector<double> cJcrit(actions::mapJcrit(*ptl));
+	ptl->setJzcrit(cJcrit);
+	return ptl;
+	/*
     switch(param.potentialType) {
     case PT_MULTIPOLE:
         return Multipole::create(particles, param.symmetryType, param.lmax, param.mmax,
-            param.gridSizeR, param.rmin, param.rmax, param.smoothing);
+				 param.gridSizeR, param.rmin, param.rmax, param.smoothing);
     case PT_CYLSPLINE:
-        return CylSpline::create(particles, param.symmetryType, param.mmax,
-            param.gridSizeR, param.rmin, param.rmax,
-            param.gridSizez, param.zmin, param.zmax);
+	    return CylSpline::create(particles, param.symmetryType, param.mmax,
+				     param.gridSizeR, param.rmin, param.rmax,
+				     param.gridSizez, param.zmin, param.zmax);
     default:
         throw std::invalid_argument("Unknown potential expansion type");
-    }
+    }*/
 }
 
 /** Create an instance of analytic potential model according to the parameters passed. 
@@ -1058,10 +1079,12 @@ PtrPotential createAnalyticPotential(const AllParam& param)
         else
             throw std::invalid_argument("Non-spherical Plummer is not supported");
     case PT_ISOCHRONE:
-        if(param.axisRatioY==1 && param.axisRatioZ==1)
+	    if(param.axisRatioY==1 && param.axisRatioZ==1){
+		    printf("Creating Isochrone Phi %g %g\n",param.mass,param.scaleRadius);
             return PtrPotential(new Isochrone(param.mass, param.scaleRadius));
-        else
-            throw std::invalid_argument("Non-spherical Isochrone is not supported");
+	    }else
+		printf("Non-spherical Isochrone is not supported\n");
+//            throw std::invalid_argument("Non-spherical Isochrone is not supported");
     case PT_NFW:
         if(param.axisRatioY==1 && param.axisRatioZ==1)
             return PtrPotential(new NFW(param.mass, param.scaleRadius));
@@ -1111,16 +1134,32 @@ PtrDensity createAnalyticDensity(const AllParam& param)
 template<typename SourceType>
 PtrPotential createPotentialExpansion(const AllParam& param, const SourceType& source)
 {
-    switch(param.potentialType) {
+	if(param.potentialType != PT_MULTIPOLE && param.potentialType != PT_CYLSPLINE){
+		printf("createPotentialFromParticles: Invalid potential type\n");
+		exit(0);
+	}
+	PtrPotential ptl = param.potentialType == PT_MULTIPOLE?
+			   Multipole::create(source, param.lmax, param.mmax,
+					     param.gridSizeR, param.rmin, param.rmax)
+			   :
+			   CylSpline::create(source, param.mmax,
+					     param.gridSizeR, param.rmin, param.rmax,
+					     param.gridSizez, param.zmin, param.zmax);
+	std::vector<double> cJcrit(actions::mapJcrit(*ptl));
+	ptl->setJzcrit(cJcrit);
+	return ptl;
+
+ /*   switch(param.potentialType) {
     case PT_MULTIPOLE:
         return Multipole::create(source, param.lmax, param.mmax,
-            param.gridSizeR, param.rmin, param.rmax);
+				 param.gridSizeR, param.rmin, param.rmax);
     case PT_CYLSPLINE:
         return CylSpline::create(source, param.mmax,
-            param.gridSizeR, param.rmin, param.rmax,
-            param.gridSizez, param.zmin, param.zmax);
-    default: throw std::invalid_argument("Unknown potential expansion type");
-    }
+				 param.gridSizeR, param.rmin, param.rmax,
+				 param.gridSizez, param.zmin, param.zmax);
+    default: throw std::invalid_argument("Unknown potential expansion
+    type");
+    }*/
 }
 
 /** Read potential coefficients from a text file, or create a potential expansion
@@ -1162,7 +1201,7 @@ PtrDensity createDensity(
     const utils::KeyValueMap& kvmap,
     const units::ExternalUnits& converter)
 {
-    AllParam param = parseParam(kvmap, converter);
+	AllParam param = parseParam(kvmap, converter);
     if(!param.file.empty())
         return readDensity(param.file, converter);
     // if 'type=...' is not provided but 'density=...' is given, use that value
@@ -1256,10 +1295,15 @@ PtrPotential createPotential(
     }
 
     assert(componentsPot.size()>0);
-    if(componentsPot.size() == 1)
+    /*if(componentsPot.size() == 1)
         return componentsPot[0];
-    else
-        return PtrPotential(new CompositeCyl(componentsPot));
+    else*/ {
+	    CompositeCyl* ptl = new CompositeCyl (componentsPot);
+	    std::vector<double> cJcrit(actions::mapJcrit(*ptl));
+	    ptl->setJzcrit(cJcrit);
+	    return PtrPotential(ptl);
+//        return PtrPotential(new CompositeCyl(componentsPot));
+    }
 }
 
 // create a potential from a single set of parameters

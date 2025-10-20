@@ -8,7 +8,6 @@
 #include "actions_spherical.h"
 #include "potential_utils.h"
 #include "math_spline.h"
-#define EXP __declspec(dllexport)
 
 namespace df{
 
@@ -96,7 +95,7 @@ public:
     QuasiSphericalIsotropic(const math::LogLogSpline& _df, const potential::BasePotential& potential) :
         df(_df), pv(potential::PotentialWrapper(potential)), af(potential) {}
 
-    virtual double value(const actions::Actions &J) const
+    virtual double value(const actions::Actions &J, const double Jrcrit) const
     {
         return df(pv(af.E(J)));
     }
@@ -132,7 +131,7 @@ public:
     virtual ~QuasiSpherical() {}
 
     /** convert actions to E,L,Lz and compute the DF */
-    virtual double value(const actions::Actions &J) const
+    virtual double value(const actions::Actions &J, const double Jrcrit) const
     {
         return value(af.E(J), /*L*/ J.Jz + (J.Jphi>=0 ? J.Jphi : -J.Jphi), /*Lz*/ J.Jphi);
     }

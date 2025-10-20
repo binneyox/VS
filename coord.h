@@ -36,11 +36,10 @@ The fundamental routines operating on these structures are the following:
 */
 #pragma once
 #include <cassert>
+#include "os.h"
 #include "math_core.h"
 #include "math_base.h"
 #include "math_spline.h"
-
-#define EXP __declspec(dllexport)
 
 /** Classes and routines for representing position/velocity points, 
     gradients and hessians of scalar functions (e.g., gravitational potential), 

@@ -8,7 +8,6 @@
 #include "potential_base.h"
 #include "smart.h"
 #include <vector>
-#define EXP __declspec(dllexport)
 
 namespace potential{
 

@@ -7,7 +7,6 @@
 #include "potential_base.h"
 #include "smart.h"
 #include <vector>
-#define EXP __declspec(dllexport)
 
 namespace potential{
 
@@ -46,6 +45,7 @@ public:
 
     unsigned int size() const { return components.size(); }
     PtrPotential component(unsigned int index) const { return components.at(index); }
+//    virtual void setJzcrit(math::CubicSpline& spl){ Jzcrit=spl; }
 private:
     std::vector<PtrPotential> components;
     virtual void evalCyl(const coord::PosCyl &pos,

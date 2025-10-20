@@ -516,14 +516,14 @@ void Sampler::run()
     fncValues.resize(numInitSamples);
     nextPoint.resize(numInitSamples);
     addPointsToCell(0, 0, numInitSamples);
-    printf("adding\n");
+//    printf("adding\n");
     evalFncLoop(0, numInitSamples);
     double refineFactor = computeResult();
     if(refineFactor <= 1)
         return;
 
     int nIter = 1;
-    do{ printf("sampling ");
+    do{
         if(cbrk.triggered())
             throw std::runtime_error("Keyboard interrupt");
         // Loop over all cells and check if there are enough sample points in the cell;
@@ -603,7 +603,7 @@ void sampleNdim(const IFunctionNdim& fnc, const double xlower[], const double xu
     if(fnc.numValues() != 1)
         throw std::invalid_argument("sampleNdim: function must provide one value");
     Sampler sampler(fnc, xlower, xupper, numSamples);
-    printf("running sampler ");
+//    printf("running sampler ");
     sampler.run();
     sampler.drawSamples(samples);
     // statistics

@@ -140,8 +140,7 @@ class DFIntegrandNdim: public math::IFunctionNdim {
 		    dflen(separate ? model.distrFunc.numValues() : 1),
 		los(_los),
 		bright(_bright),
-		faint(_faint)
-		{}
+		faint(_faint){}
 
     /** compute one or more moments of distribution function. */
 		    virtual void eval(const double vars[], double values[]) const
@@ -168,7 +167,9 @@ class DFIntegrandNdim: public math::IFunctionNdim {
 	    // unrealistically high DF values. We therefore ignore these points
 	    // entirely, but the real problem is with the action finder, not here.
 				    bool valid = true;
+				    math::ScalingSemiInf Sc;
 				    if(isFinite(act.Jr + act.Jz + act.Jphi) && (act.Jr!=0 || act.Jz!=0)) {
+					    double Jzc = math::evalPoly(model.potential.cJcrit, scale(Sc,2*act.Jr + act.Jz));
 					    if(los){
 //						    double s = los->s0 + los->s(posvel);
 						    if(bright){//Compute abs mags
@@ -176,19 +177,19 @@ class DFIntegrandNdim: public math::IFunctionNdim {
 							    //shift += los->A_H(sKpc);
 							    double shift = los->sMod_H(posvel);
 							    double Bright = bright - shift, Faint = faint - shift;//Now abs mags
-							    model.distrFunc.withSF(act, dfval, Bright, Faint);
+							    model.distrFunc.withSF(act, Jzc, dfval, Bright, Faint);
 						    } else {//Just reduce star count for extinction
 							    //double fac = pow(10,-0.4*los->A_H(sKpc));
 							    double fac = los->reduc_H(posvel);
-							    if(dflen==1) dfval[0]=model.distrFunc.value(act);
-							    else model.distrFunc.eval(act, dfval);
+							    if(dflen==1) dfval[0]=model.distrFunc.value(act, Jzc);
+							    else model.distrFunc.eval(act, Jzc, dfval);
 							    for(int cpt=0; cpt<dflen; cpt++)
 								    dfval[cpt] *= fac;
 						    }
 					    }
 					    else{
-						    if(dflen==1) dfval[0]=model.distrFunc.value(act);
-						    else model.distrFunc.eval(act, dfval);  
+						    if(dflen==1) dfval[0]=model.distrFunc.value(act, Jzc);
+						    else model.distrFunc.eval(act, Jzc, dfval);  
 					    }
 				// multiply by jacobian, check for possibly invalid values and replace them with zeroes
 					    for(unsigned int i=0; i<dflen; i++) {
@@ -205,11 +206,11 @@ class DFIntegrandNdim: public math::IFunctionNdim {
 			    }
 			    catch(std::exception& e) {
 	    // dump out the error at the highest debug logging level
-				    std::cout << "DFIntegrandNdim" + std::string(e.what()) +
+				    std::cout << "DFIntegrandNdim " + std::string(e.what()) +
 						    " at R="+utils::toString(posvel.R)  +", z="   +utils::toString(posvel.z)+
 						    ", phi="+utils::toString(posvel.phi)+", vR="  +utils::toString(posvel.vR)+
 						    ", vz=" +utils::toString(posvel.vz) +", vphi="+utils::toString(posvel.vphi)
-						    << "\n";
+						    << "\n"; exit(0);
 				    if(utils::verbosityLevel >= utils::VL_VERBOSE) {
 /*					    utils::msg(utils::VL_VERBOSE, "DFIntegrandNdim", std::string(e.what()) +
 						    " at R="+utils::toString(posvel.R)  +", z="   +utils::toString(posvel.z)+
@@ -377,7 +378,8 @@ public:
 
     virtual void eval(const double vars[], double values[]) const
     {
-        try{
+	    try{
+		    math::ScalingSemiInf Sc;
             double X = vars[0], Y = vars[1], W = 2*vars[2]-1, Z, jac;  // W is scaled Z:
             if(W<0) {
                 Z   = -exp(1/(1+W) + 1/W);
@@ -416,14 +418,14 @@ public:
 
             // 2. determine the actions
             actions::Actions act = model.actFinder.actions(posvel);
-
+	    double Jzc = math::evalPoly(model.potential.cJcrit, scale(Sc,2*act.Jr + act.Jz));
             // 3. compute the value of distribution function times the jacobian
             // FIXME: in some cases the Fudge action finder may fail and produce
             // zero values of Jr,Jz instead of very large ones, which may lead to
             // unrealistically high DF values. We therefore ignore these points
             // entirely, but the real problem is with the action finder, not here.
             double dfval = isFinite(act.Jr + act.Jz + act.Jphi) && (act.Jr!=0 || act.Jz!=0) ?
-                model.distrFunc.value(act) * jac : 0.;
+                model.distrFunc.value(act, Jzc) * jac : 0.;
 
             if(!isFinite(dfval))
                 dfval = 0;
@@ -752,7 +754,7 @@ class DF_LFIntegrandNdim: public math::IFunctionNdim {
 			    try{
 	    // 2. determine the actions
 				    actions::Actions act = model.actFinder.actions(posvel.first);
-
+				    math::ScalingSemiInf Sc;
 	    // 3. compute the value of distribution function times the jacobian
 	    // FIXME: in some cases the Fudge action finder may fail and produce
 	    // zero values of Jr,Jz instead of very large ones, which may lead to
@@ -760,15 +762,16 @@ class DF_LFIntegrandNdim: public math::IFunctionNdim {
 	    // entirely, but the real problem is with the action finder, not here.
 				    bool valid = true;
 				    if(isFinite(act.Jr + act.Jz + act.Jphi) && (act.Jr!=0 || act.Jz!=0)) {
+					    double Jzc = math::evalPoly(model.potential.cJcrit, scale(Sc,2*act.Jr + act.Jz));
 					    if(bright){//proposed mag is apparent
 						    double s = los->s(posvel.first);
 						    double shift = 5*log10(100 * s);
 						    shift += los->A_H(s);
 						    double Mag=posvel.second - shift;
-						    model.distrFunc.withLF(act, dfval, Mag);
+						    model.distrFunc.withLF(act, Jzc, dfval, Mag);
 					    } 
 					    else{//proposed mag is absolute
-						    model.distrFunc.withLF(act, dfval, posvel.second);  
+						    model.distrFunc.withLF(act, Jzc, dfval, posvel.second);
 					    }
 				// multiply by jacobian, check for possibly invalid values and replace them with zeroes
 					    for(unsigned int i=0; i<dflen; i++) {

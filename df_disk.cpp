@@ -58,7 +58,7 @@ EXP QuasiIsothermal::QuasiIsothermal(const QuasiIsothermalParam &params, const p
         throw std::invalid_argument("QuasiIsothermal: invalid value for velocity dispersion at birth");
 }
 
-EXP double QuasiIsothermal::value(const actions::Actions &J) const
+EXP double QuasiIsothermal::value(const actions::Actions &J, const double Jzc) const
 {
     // obtain the radius of in-plane motion with the given "characteristic" angular momentum
     double Rcirc = freq.R_from_Lz(sqrt(pow_2(par.Jmin) +
@@ -96,7 +96,7 @@ EXP Exponential::Exponential(const ExponentialParam& params) :
 		readBrighterThan(par.Fname);
 }
 
-EXP double Exponential::value(const actions::Actions &J) const
+EXP double Exponential::value(const actions::Actions &J, const double Jzc) const
 {
 	if(J.Jphi<=0) return 0;
 	double Jt=1.5*J.Jr+J.Jz+J.Jphi;
@@ -152,7 +152,7 @@ taperExp::taperExp(const taperExpParam& params) :
 		readBrighterThan(par.Fname);
 }
 
-double taperExp::value(const actions::Actions &J) const
+double taperExp::value(const actions::Actions &J, const double Jzc) const
 {
 	if(J.Jphi<=0) return 0;
 	//double Jt = J.Jr+J.Jz+J.Jphi;

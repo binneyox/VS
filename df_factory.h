@@ -11,7 +11,6 @@
 #include "units.h"
 #include "df_spherical.h"
 #include "utils_config.h"
-#define EXP __declspec(dllexport)
 
 namespace df {
 
@@ -28,30 +27,30 @@ public:
     PtrDistributionFunction component(unsigned int index) const { return components.at(index); }
 
     /// the value of a composite DF is simply the sum of values of all its components
-    virtual double value(const actions::Actions &J) const {
+    virtual double value(const actions::Actions &J, const double Jrcrit) const {
         double sum=0;
         for(unsigned int i=0; i<components.size(); i++){
-			sum+= components[i]->value(J);
+			sum+= components[i]->value(J, Jrcrit);
 		}
         return sum;
     }
 
     /// Compute values of all components for the given actions and output them separately
-    virtual void eval(const actions::Actions &J, double values[]) const {
+    virtual void eval(const actions::Actions &J, const double Jrcrit, double values[]) const {
         for(unsigned int i=0; i<components.size(); i++){
-			values[i] = components[i]->value(J);
+			values[i] = components[i]->value(J, Jrcrit);
 		}
     }
 	
-    virtual void withSF(const actions::Actions &J, double values[], double Bright, double Faint) const{
+    virtual void withSF(const actions::Actions &J, const double Jrcrit, double values[], double Bright, double Faint) const{
 	    for(unsigned int i=0; i<components.size(); i++){
-		    values[i] = components[i]->value(J) * components[i]->fraction(Bright,Faint);
+		    values[i] = components[i]->value(J, Jrcrit) * components[i]->fraction(Bright,Faint);
 	    }
     }
 
-    virtual void withLF(const actions::Actions &J, double values[], double Mag) const{
+    virtual void withLF(const actions::Actions &J, const double Jrcrit, double values[], double Mag) const{
 	    for(unsigned int i =0;i<components.size();i++){
-		    values[i] = components[i]->value(J) * components[i]->LF(Mag);
+		    values[i] = components[i]->value(J, Jrcrit) * components[i]->LF(Mag);
 	    }
     }
 

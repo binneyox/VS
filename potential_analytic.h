@@ -5,7 +5,6 @@
 */
 #pragma once
 #include "potential_base.h"
-#define EXP __declspec(dllexport)
 
 namespace potential{
 
@@ -144,7 +143,7 @@ class EXP Logarithmic: public BasePotentialCar{
 public:
 	Logarithmic(double sigma, double coreRadius=0, double axisRatioYtoX=1,
 		    double axisRatioZtoX=1, double _Lm=10) :
-	    sigma2(pow_2(sigma)), coreRadius2(pow_2(coreRadius)),
+	    sigma2(pow_2(sigma)), Rc2(pow_2(coreRadius)),
 	    p2(pow_2(axisRatioYtoX)), q2(pow_2(axisRatioZtoX)), Lm(_Lm){}
 	virtual coord::SymmetryType symmetry() const {
         return p2==1 ? (q2==1 ? coord::ST_SPHERICAL : coord::ST_AXISYMMETRIC) : coord::ST_TRIAXIAL; }
@@ -153,7 +152,7 @@ public:
     virtual double totalMass() const { return INFINITY; }
 private:
     const double sigma2;       ///< squared asymptotic circular velocity (sigma)
-    const double coreRadius2;  ///< squared core radius (r_c)
+    const double Rc2;          ///< squared core radius (r_c)
     const double p2;           ///< squared y/x axis ratio (p)
     const double q2;           ///< squared z/x axis ratio (q)
     const double Lm;		///< asymptotic value of 2*Phi/sigma^2

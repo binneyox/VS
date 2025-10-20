@@ -10,8 +10,6 @@
 #include "particles_base.h"
 #include "obs.h"
 
-#define EXP __declspec(dllexport)
-
 /// A complete galaxy model (potential, action finder and distribution function) and associated routines
 namespace galaxymodel{
 

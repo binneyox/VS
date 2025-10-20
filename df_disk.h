@@ -6,7 +6,6 @@
 #pragma once
 #include "df_base.h"
 #include "potential_utils.h"
-#define EXP __declspec(dllexport)
 
 namespace df{
 
@@ -103,7 +102,7 @@ public:
 
     /** return value of DF for the given set of actions
         \param[in] J are the actions  */
-    virtual double value(const actions::Actions &J) const;
+    virtual double value(const actions::Actions &J, const double Jzcrit) const;
 };
 
 /** Exponential DF
@@ -150,7 +149,7 @@ class EXP Exponential: public df::BaseDistributionFunction{
     const ExponentialParam par;     ///< parameters of the DF
 	public:
 		Exponential(const ExponentialParam& params);
-		virtual double value(const actions::Actions &J) const;
+		virtual double value(const actions::Actions &J, const double Jzcrit) const;
 		virtual void write_params(std::ofstream &strm,const units::InternalUnits &intUnits) const;
 };
 
@@ -184,7 +183,7 @@ class EXP taperExp: public df::BaseDistributionFunction{
 	const taperExpParam par;     ///< parameters of the DF
 	public:
 		taperExp(const taperExpParam& params);
-		virtual double value(const actions::Actions &J) const;
+		virtual double value(const actions::Actions &J, const double Jzcrit) const;
 		void write_params(std::ofstream &strm,const units::InternalUnits &intUnits) const;
 };
 

@@ -26,9 +26,9 @@
     a separate class and allows read/write access and fast solution of linear systems.
 */
 #pragma once
+#include "os.h"
 #include <vector>
 #include <cstddef>  // defines NULL, size_t and ptrdiff_t
-#define EXP __declspec(dllexport)
 
 namespace math{
 

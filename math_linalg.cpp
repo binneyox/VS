@@ -3,8 +3,6 @@
 #include <cmath>
 #include <stdexcept>
 
-#define EXP __declspec(dllexport)
-
 #ifdef HAVE_EIGEN
 
 // calm down excessively optimizing Intel compiler, which otherwise screws the SVD module

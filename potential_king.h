@@ -4,8 +4,8 @@
     \date    2018
 **/
 #pragma once
+#include "os.h"
 #include "smart.h"
-#define EXP __declspec(dllexport)
 
 namespace potential {
 

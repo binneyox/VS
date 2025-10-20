@@ -11,7 +11,6 @@
 #include "particles_base.h"
 #include "units.h"
 #include <string>
-#define EXP __declspec(dllexport)
 
 namespace particles {
 

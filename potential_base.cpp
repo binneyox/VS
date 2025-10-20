@@ -2,8 +2,6 @@
 #include "math_core.h"
 #include <cmath>
 
-#define EXP __declspec(dllexport)
-
 namespace potential{
 
 /// relative accuracy of density computation by integration

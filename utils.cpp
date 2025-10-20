@@ -15,8 +15,6 @@
 #include <execinfo.h>
 #endif
 
-#define EXP __declspec(dllexport)
-
 namespace utils {
 
 EXP bool fileExists(const std::string& fileName)

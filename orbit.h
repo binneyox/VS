@@ -32,7 +32,6 @@
 #include "smart.h"
 #include <vector>
 #include <utility>
-#define EXP __declspec(dllexport)
 
 /** Orbit integration routines and classes */
 namespace orbit {

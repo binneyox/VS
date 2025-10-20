@@ -152,28 +152,28 @@ void MiyamotoNagai::evalCyl(const coord::PosCyl &pos,
 void Logarithmic::evalCar(const coord::PosCar &pos,
 			  double* potential, coord::GradCar* deriv, coord::HessCar* deriv2) const
 {
-	double m2 = coreRadius2 + pow_2(pos.x) + pow_2(pos.y)/p2 + pow_2(pos.z)/q2;
+	double m2 = 1 + (pow_2(pos.x) + pow_2(pos.y)/p2 + pow_2(pos.z)/q2)/Rc2;
 	double L = log(m2), oLpLm = 1/(1+L/Lm), oLpLmsq = pow_2(oLpLm);
 	if(potential)
-		*potential = 0.5 * sigma2 * (L * oLpLm - Lm);
+		*potential = -0.5 * sigma2 * Lm * oLpLm;
 	if(deriv) {
-		deriv->dx = pos.x * sigma2/m2    * oLpLmsq;
-		deriv->dy = pos.y * sigma2/m2/p2 * oLpLmsq;
-		deriv->dz = pos.z * sigma2/m2/q2 * oLpLmsq;
+		deriv->dx = pos.x * sigma2/(Rc2*m2)    * oLpLmsq;
+		deriv->dy = pos.y * sigma2/(Rc2*m2*p2) * oLpLmsq;
+		deriv->dz = pos.z * sigma2/(Rc2*m2*q2) * oLpLmsq;
 	}
 	if(deriv2) {
-		double dLdx = 2*pos.x/m2, dLdy = 2*pos.y/(p2*m2), dLdz = 2*pos.z/(q2*m2);
-		deriv2->dx2 = sigma2 * oLpLmsq * ((1/m2    - 2 * pow_2(pos.x / m2))
+		double dLdx = 2*pos.x/(m2*Rc2), dLdy = 2*pos.y/(p2*m2*Rc2), dLdz = 2*pos.z/(q2*m2*Rc2);
+		deriv2->dx2 = sigma2 * oLpLmsq * ((1/(m2*Rc2)    - 2 * pow_2(pos.x / (m2*Rc2)))
 					- dLdx * dLdx /Lm * oLpLm);
-		deriv2->dy2 = sigma2 * oLpLmsq * ((1/m2/p2 - 2 * pow_2(pos.y / (m2 * p2)))
+		deriv2->dy2 = sigma2 * oLpLmsq * ((1/(Rc2*m2*p2) - 2 * pow_2(pos.y / (Rc2*m2*p2)))
 					- dLdy * dLdy /Lm *oLpLm);
-		deriv2->dz2 = sigma2 * oLpLmsq * ((1/m2/q2 - 2 * pow_2(pos.z / (m2 * q2)))
+		deriv2->dz2 = sigma2 * oLpLmsq * ((1/(Rc2*m2*q2) - 2 * pow_2(pos.z / (Rc2*m2*q2)))
 					- dLdz * dLdz /Lm *oLpLm);
-		deriv2->dxdy=-sigma2 * oLpLmsq * (pos.x * pos.y * 2 / (pow_2(m2) * p2)
+		deriv2->dxdy=-sigma2 * oLpLmsq * (pos.x * pos.y * 2 / (pow_2(Rc2*m2) * p2)
 					+ dLdx * dLdy /Lm * oLpLm);
-		deriv2->dydz=-sigma2 * oLpLmsq * (pos.y * pos.z * 2 / (pow_2(m2) * p2 * q2)
+		deriv2->dydz=-sigma2 * oLpLmsq * (pos.y * pos.z * 2 / (pow_2(Rc2*m2) * p2 * q2)
 					+ dLdy * dLdz /Lm * oLpLm);
-		deriv2->dxdz=-sigma2 * oLpLmsq * (pos.z * pos.x * 2 / (pow_2(m2) * q2)
+		deriv2->dxdz=-sigma2 * oLpLmsq * (pos.z * pos.x * 2 / (pow_2(Rc2*m2) * q2)
 					+ dLdx * dLdz /Lm * oLpLm);
 	}}
 

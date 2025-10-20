@@ -247,6 +247,33 @@ template<> EXP double unscale(const ScalingInf& /*scaling*/, double s, double* d
     return 1 / (1-s) - 1 / s;
 }
 
+EXP double scale(const ScalingInfTh& scaling, double x,double *dsdx, double *d2sdx2) {
+	if(std::isinf(x)){
+		if(dsdx)*dsdx=0;
+		if(d2sdx2)*d2sdx2=0;
+		return 1;
+	}
+	double tnhx = tanh(x /scaling.x0);
+	double sechx2 = 1 - tnhx * tnhx;
+	double s = .5 * (tnhx + 1);
+	if (dsdx) *dsdx = .5 * sechx2 / scaling.x0;
+	if (d2sdx2) *d2sdx2 = -sechx2 * tnhx / pow_2(scaling.x0);
+	return s;
+}
+template<> EXP double scale(const ScalingInfTh& scaling, double x) {
+	return scale(scaling, x);
+}
+EXP double unscale(const ScalingInfTh& scaling, double s, double* dxds, double *d2xds2) {
+	double x = scaling.x0 * atanh(2 * s - 1);
+	double inv = (dxds||d2xds2)? 1. / (1 - pow_2(2 * s - 1)):0;
+	if (dxds) *dxds = 2 * scaling.x0 * inv;
+	if (d2xds2) *d2xds2 = 8 * scaling.x0 * (2 * s - 1) * pow_2(inv);
+	return x;
+}
+template<> EXP double unscale(const ScalingInfTh& scaling, double s, double* dxds) {
+	return  unscale(scaling, s, dxds, NULL);
+}
+
 // u in (-inf, u0] or [u0, +inf), when u0 is +-zero or the sign of u0 is the same as the sign of infinity
 template<> EXP double scale(const ScalingSemiInf& scaling, double u) {
     if(scaling.u0 == 0)  // transform u to log(u) and then use the scaling on a doubly-infinite interval

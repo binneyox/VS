@@ -7,7 +7,6 @@
 #include "df_base.h"
 #include "potential_utils.h"
 #include "actions_spherical.h"
-#define EXP __declspec(dllexport)
 
 namespace df{
 

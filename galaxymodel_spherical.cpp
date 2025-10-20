@@ -9,8 +9,6 @@
 #include <stdexcept>
 #include <fstream>
 
-#define EXP __declspec(dllexport)
-
 namespace galaxymodel{
 
 namespace{

@@ -642,7 +642,6 @@ Actions actionsSpherical(
 {
 	return actionsSpherical(potential,coord::toPosVelCyl(point));
 }
-
 ActionAngles actionAnglesSpherical(
     const potential::BasePotential& pot, const coord::PosVelCyl& point, Frequencies* freqout)
 {
@@ -662,6 +661,11 @@ ActionAngles actionAnglesSpherical(
     Angles angs  = computeAngles(point, potential::PotentialWrapper(pot),
         E, L, R1, R2, freq.Omegar, freq.Omegaz);
     return ActionAngles(acts, angs);
+}
+ActionAngles actionAnglesSpherical(
+    const potential::BasePotential& pot, const coord::PosMomCyl& point, Frequencies* freqout)
+{
+    return actionAnglesSpherical(pot,coord::toPosVelCyl(point),freqout);
 }
 
 
@@ -802,5 +806,9 @@ coord::PosMomSphMod ActionFinderSpherical::map(
     }
     return p0;
 }
-
+EXP void mapHJr(const potential::BasePotential &pot,math::QuinticSpline2d& intJr,math::QuinticSpline2d& intE){
+    potential::Interpolator2d potint(pot);
+    intJr=createActionInterpolator(potint);
+    intE=createEnergyInterpolator(potint,intJr);
+}
 }  // namespace actions

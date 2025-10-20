@@ -4,6 +4,7 @@
 #include "potential_composite.h"
 #include "potential_multipole.h"
 #include "potential_cylspline.h"
+#include "actions_newtorus.h"
 #include <stdexcept>
 #include <cassert>
 #include <cmath>
@@ -83,7 +84,7 @@ EXP void doIteration(SelfConsistentModel& model)
 {
     // need to initialize the potential and the action finder before the first iteration
     if(!model.totalPotential)
-        updateTotalPotential(model);
+	    updateTotalPotential(model);
     else
         if(!model.actionFinder)
             updateActionFinder(model);
@@ -135,7 +136,8 @@ EXP void updateTotalPotential(SelfConsistentModel& model)
     // otherwise don't use multipole expansion at all
 
     // construct potential expansion from the total density
-    // and add it as one of potential components (possibly the only one)
+    // and add it as one of potential components (possibly the only
+    // one)
     if(totalDensitySph != NULL)
         compPot.push_back(potential::Multipole::create(*totalDensitySph,
             model.lmaxAngularSph, model.mmaxAngularSph,
@@ -155,14 +157,25 @@ EXP void updateTotalPotential(SelfConsistentModel& model)
 
     // now check if the total potential is elementary or composite
     if(compPot.size()==0)
-        throw std::runtime_error("No potential is present in SelfConsistentModel");
-    if(compPot.size()==1)
-        model.totalPotential = compPot[0];
-    else
-	    model.totalPotential.reset(new potential::CompositeCyl(compPot));
-
+	    throw std::runtime_error("No potential is present in SelfConsistentModel");
+    /* if(compPot.size()==1){
+	    potential::BasePotential* ptl = new potential::Potential(&compPot[0]);
+	    math::CubicSpline spl(actions::mapJcrit(*ptl));
+	    ptl->setJzcrit(spl);
+	    model.totalPotential = ptl;
+    } else */ {
+	    potential::CompositeCyl* ptl = new potential::CompositeCyl (compPot);
+//	    printf("in updateTotalPotential calling mapJcrit\n");    
+	    std::vector<double> cJcrit(actions::mapJcrit(*ptl));
+//	    printf("in updateTotalPotential calling setJzcrit\n");    
+	    ptl->setJzcrit(cJcrit);
+	    model.totalPotential.reset(ptl);
+    }    
     // finally, create the action finder for the new potential
+ //   printf("in updateTotalPotential udating AF\n");
     updateActionFinder(model);
+//    printf("in updateTotalPotential AF updated\n");
+
 }
 
 }  // namespace

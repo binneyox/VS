@@ -466,4 +466,25 @@ int findMinNdimDeriv(const IFunctionNdimDeriv& F, const double xinit[], const do
     return numIter;
 }
 
+EXP std::vector<double> fitPoly(const int N, const std::vector<double>& x,
+				const std::vector<double>& y){
+	int M = x.size();
+	math::Matrix<double> X(M,N);
+	for(int n=0; n<N; n++)
+		for(int m=0; m<M; m++)
+			X(m,n)=pow(x[m],n);
+	std::vector<double> c;
+	double rms;
+	math::linearMultiFit(X,y,NULL,c,&rms);
+	printf("rms %g\n",rms);
+	return c;
+}
+EXP double evalPoly(const std::vector<double>& c, const double x){
+	int N = c.size();
+	double sum = c[0];
+	for(int n=1; n<N; n++)
+		sum += c[n]*pow(x,n);
+	return sum;
+}
+
 }  // namespace

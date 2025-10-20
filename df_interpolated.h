@@ -7,7 +7,6 @@
 #include "df_base.h"
 #include "math_spline.h"
 #include "smart.h"
-#define EXP __declspec(dllexport)
 
 namespace df{
 

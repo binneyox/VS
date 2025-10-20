@@ -18,7 +18,7 @@ EXP DoublePowerLawParam parseDoublePowerLawParam(
 	par.Jcutoff   = kvmap.getDouble("Jcutoff",   par.Jcutoff) * conv.lengthUnit * conv.velocityUnit;
 	par.Jphi0     = kvmap.getDouble("Jphi0",     par.Jphi0)   * conv.lengthUnit * conv.velocityUnit;
 	par.Jcore     = kvmap.getDouble("Jcore",     par.Jcore)   * conv.lengthUnit * conv.velocityUnit;
-	par.sigmaJ    = kvmap.getDouble("sigmaJ",    par.sigmaJ)  * conv.lengthUnit * conv.velocityUnit;
+	par.epsilonJ  = kvmap.getDouble("epsilonJ",  par.epsilonJ)  * conv.lengthUnit * conv.velocityUnit;
 	par.slopeIn   = kvmap.getDouble("slopeIn",   par.slopeIn);
 	par.slopeOut  = kvmap.getDouble("slopeOut",  par.slopeOut);
 	par.steepness = kvmap.getDouble("steepness", par.steepness);
@@ -29,6 +29,8 @@ EXP DoublePowerLawParam parseDoublePowerLawParam(
 	par.rotFrac   = kvmap.getDouble("rotFrac",   par.rotFrac);
 	par.cutoffStrength = kvmap.getDouble("cutoffStrength", par.cutoffStrength);
 	par.Fname     = kvmap.getString("PopFile", par.Fname);
+	if(std::isnan(par.J0+par.epsilonJ+par.slopeIn+par.slopeOut))
+		printf("parseDoublePowerLawParam: vital parametr not set\n");
 	return par;
 }
 
@@ -38,11 +40,17 @@ EXP DwarfSpheroidParam parseDwarfSpheroidParam(
 {
 	DwarfSpheroidParam par;
 	par.norm	= kvmap.getDouble("norm", par.norm)	* conv.massUnit;
+	par.mass        = kvmap.getDouble("mass",      par.mass)    * conv.massUnit;
 	par.J0		= kvmap.getDouble("J0", par.J0)		* conv.lengthUnit * conv.velocityUnit;
+	par.Jphi0	= kvmap.getDouble("Jphi0", par.Jphi0)	* conv.lengthUnit * conv.velocityUnit;
+	par.epsilonJ	= kvmap.getDouble("epsilonJ", par.epsilonJ) * conv.lengthUnit * conv.velocityUnit;
 	par.alpha	= kvmap.getDouble("alpha", par.alpha);
+	par.coefJr      = kvmap.getDouble("coefJr",  par.coefJr);
+	par.coefJz      = kvmap.getDouble("coefJz",  par.coefJz);
 	par.rotFrac	= kvmap.getDouble("rotFrac", par.rotFrac);
-	par.Jphi	= kvmap.getDouble("Jphi", par.Jphi)	* conv.lengthUnit * conv.velocityUnit;
-	par.sigmaJ	= kvmap.getDouble("sigmaJ", par.sigmaJ) * conv.lengthUnit * conv.velocityUnit;
+	par.Fname       = kvmap.getString("PopFile", par.Fname);
+	if(std::isnan(par.J0+par.epsilonJ))
+		printf("parseDwarfSpheroidParam: vital parametr not set\n");
 	return par;
 }
 
@@ -168,7 +176,6 @@ EXP NewOxfordParam parseNewOxfordParam(
 	par.slopeOut  = kvmap.getDouble("slopeOut",  par.slopeOut);
 	par.steepness = kvmap.getDouble("steepness", par.steepness);
 	par.beta     = kvmap.getDouble("beta",	     par.beta);
-	par.kIn       = kvmap.getDouble("kIn",       par.kIn);
 	par.rotFrac   = kvmap.getDouble("rotFrac",   par.rotFrac);
 	par.cutoffStrength = kvmap.getDouble("cutoffStrength", par.cutoffStrength);
 	par.Fname  = kvmap.getString("PopFile", par.Fname);
@@ -188,7 +195,7 @@ EXP PtrDistributionFunction createDistributionFunction(
     const potential::BaseDensity* density,
     const units::ExternalUnits& converter)
 {
-    std::string type = kvmap.getString("type");
+	std::string type = kvmap.getString("type");
     // for some DF types, there are two alternative ways of specifying the normalization:
     // either directly as norm, Sigma0, etc., or as the total mass, from which the norm is computed
     // by creating a temporary instance of a corresponding DF class, and computing its mass
@@ -201,7 +208,7 @@ EXP PtrDistributionFunction createDistributionFunction(
 	    }
 	    return PtrDistributionFunction(new DoublePowerLaw(par));
     }
-    if(utils::stringsEqual(type, "NewDoublePowerLaw")) {
+    else if(utils::stringsEqual(type, "NewDoublePowerLaw")) {
 	    DoublePowerLawParam par = parseDoublePowerLawParam(kvmap, converter);
 	    if(mass>0) {
 		    par.norm = 1.0;
@@ -209,21 +216,13 @@ EXP PtrDistributionFunction createDistributionFunction(
 	    }
 	    return PtrDistributionFunction(new NewDoublePowerLaw(par, *potential));
     }
-    if(utils::stringsEqual(type, "DwarfSpheroid")) {
+    else if(utils::stringsEqual(type, "DwarfSpheroid")) {
 	    DwarfSpheroidParam par = parseDwarfSpheroidParam(kvmap, converter);
 	    if(mass>0) {
 		    par.norm = 1;
 		    par.norm = mass/DwarfSpheroid(par).totalMass();
 	    }
 	    return PtrDistributionFunction(new DwarfSpheroid(par));
-    }
-    if(utils::stringsEqual(type, "NewDwarfSpheroid")) {
-	    DwarfSpheroidParam par = parseDwarfSpheroidParam(kvmap, converter);
-	    if(mass>0) {
-		    par.norm = 1;
-		    par.norm = mass/DwarfSpheroid(par).totalMass();
-	    }
-	    return PtrDistributionFunction(new NewDwarfSpheroid(par, *potential));
     }
     else if(utils::stringsEqual(type, "Exponential")) {
 	    ExponentialParam par = parseExponentialParam(kvmap, converter);
@@ -280,12 +279,8 @@ EXP PtrDistributionFunction createDistributionFunction(
 	    }
 	    return PtrDistributionFunction(new NewOxford(par, pot_interp));
     }
-/*    else if(utils::stringsEqual(type, "Bologna")) {
-	    return PtrDistributionFunction(new Bologna(parseBolognaParams(kvmap, converter)));
-    }*/
-
     else{
-	    printf("Unknown type of distribution function: %s xx\n",type.c_str()); exit(1);
+	    printf("Unknown type of distribution function: %s\n",type.c_str()); exit(1);
     }
 }
 

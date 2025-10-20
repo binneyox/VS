@@ -4,11 +4,11 @@
     \date    2015
 */
 #pragma once
+#include "os.h"
 #include <cstddef>   // defines NULL
 #include <limits>    // defines infinity and NaN
 #include <algorithm> // defines min & max
 #include <vector>
-#define EXP __declspec(dllexport)
 
 // some useful numbers (or even not-a-numbers)
 

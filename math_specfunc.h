@@ -4,7 +4,7 @@
     \author Eugene Vasiliev
 */
 #pragma once
-#define EXP __declspec(dllexport)
+#include "os.h"
 
 // most of the functions here return NAN in case of invalid arguments or out-of-range results;
 // the error message is stored in the string variable math::exceptionText

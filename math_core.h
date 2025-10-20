@@ -6,7 +6,6 @@
 #pragma once
 #include "math_base.h"
 #include <complex>
-#define EXP __declspec(dllexport)
 
 namespace math{
 
@@ -123,6 +122,14 @@ private:
 /// this is useful for finding roots on the entire real axis, if the magnitude of the unscaled
 /// variable u is known to be moderate (e.g., it is a logarithm of some other quantity)
 struct EXP ScalingInf {};
+
+    /// transforms -inf<=x<=inf to -1<=s<=1 via s=arctanh(x/x0), where x0 is some chosne scale factor.
+struct EXP ScalingInfTh{
+	double x0;
+	ScalingInfTh(double _x0=1):x0(_x0){}
+};
+EXP double scale(const ScalingInfTh& scaling, double x,double *dsdx=NULL, double *d2sdx2=NULL);
+EXP double unscale(const ScalingInfTh& scaling, double s, double* dxds, double *d2xds2);
 
 /// transform a semi-infinite interval 
 /// 0 <= u <= +inf,       or  -inf <= u <= -0,  or  

@@ -30,7 +30,6 @@
 #include "particles_base.h"
 #include "math_linalg.h"
 #include "smart.h"
-#define EXP __declspec(dllexport)
 
 namespace potential {
 

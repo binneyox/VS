@@ -8,8 +8,6 @@
 #include <stdexcept>
 #include <cassert>
 
-#define EXP __declspec(dllexport)
-
 namespace galaxymodel{
 
 namespace {  // internal

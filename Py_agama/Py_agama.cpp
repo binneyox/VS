@@ -1,35 +1,40 @@
 #include <variant>
-#include "pch.h"
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
 #include <pybind11/stl.h>
-#include "/u/c/agama/agama/actions_base.h"
-#include "/u/c/agama/agama/actions_newtorus.h"
-#include "/u/c/agama/agama/actions_staeckel.h"
-#include "/u/c/agama/agama/potential_factory.h"
-//#include "/u/c/agama/Tom/agamanew/potential_factory.h"
-#include "/u/c/agama/agama/potential_composite.h"
-#include "/u/c/agama/agama/potential_cylspline.h"
-#include "/u/c/agama/agama/potential_multipole.h"
-#include "/u/c/agama/agama/potential_analytic.h"
-#include "/u/c/agama/agama/particles_io.h"
-#include "/u/c/agama/agama/math_spline.h"
-#include "/u/c/agama/agama/orbit.h"
-#include "/u/c/agama/agama/coord.h"
-#include "/u/c/agama/agama/obs_base.h"
-#include "/u/c/agama/agama/units.h"
-#include "/u/c/agama/agama/utils.h"
-#include "/u/c/agama/agama/utils_config.h"
-#include "/u/c/agama/agama/df_base.h"
-#include "/u/c/agama/agama/df_factory.h"
-#include "/u/c/agama/agama/df_spherical.h"
-#include "/u/c/agama/agama/df_halo.h"
-#include "/u/c/agama/agama/galaxymodel_base.h"
-#include "/u/c/agama/agama/galaxymodel_selfconsistent.h"
-#include "/u/c/agama/agama/galaxymodel_velocitysampler.h"
+#include "actions_base.h"
+#include "actions_newtorus.h"
+#include "actions_staeckel.h"
+#include "potential_factory.h"
+#include "potential_composite.h"
+#include "potential_cylspline.h"
+#include "potential_multipole.h"
+#include "potential_analytic.h"
+#include "particles_io.h"
+#include "math_spline.h"
+#include "orbit.h"
+#include "coord.h"
+#include "obs_base.h"
+#include "units.h"
+#include "utils.h"
+#include "utils_config.h"
+#include "df_base.h"
+#include "df_factory.h"
+#include "df_spherical.h"
+#include "df_halo.h"
+#include "galaxymodel_base.h"
+#include "galaxymodel_selfconsistent.h"
+#include "galaxymodel_velocitysampler.h"
 namespace py = pybind11;
 using namespace pybind11::literals;
-#define EXP __declspec(dllexport)
+namespace actions{
+EXP class Jzfind{
+public:
+    std::vector<double> params;
+    Jzfind(const potential::BasePotential &_pot):params(mapJcrit(_pot)){};
+    double value(const double Jr){return math::evalPoly(params,Jr);}
+};
+}
 PYBIND11_MODULE(Py_agama, m) {
     using Bspl13=math::BsplineInterpolator1d<3>;
     py::class_<Bspl13>(m,"BsplineInterpolator1d3")
@@ -420,13 +425,22 @@ PYBIND11_MODULE(Py_agama, m) {
     py::class_<actions::TorusGenerator>(m,"TorusGenerator")
         .def(py::init([](potential::PtrPotential pot, const double  tol=1e-9) 
         { return actions::TorusGenerator(*pot,tol);}))
-        .def("fitTorus",&actions::TorusGenerator::fitTorus,"J"_a,"tighten"_a=1.0);
+        .def("fitTorus",[] (actions::TorusGenerator& self,actions::Actions J, double tighten = 1, int type = 0){
+            int typer=type;
+            if(type>2)typer=2;
+            if(type<0)typer=0;
+            return self.fitTorus(J,tighten,actions::ToyPotType(type));
+        },"J"_a,"tighten"_a=1,"type"_a=0);
+    py::class_<actions::Jzfind>(m,"Jzfind")
+        .def(py::init<const potential::BasePotential&>())
+        .def_readwrite("parameters",&actions::Jzfind::params)
+        .def("value",&actions::Jzfind::value);
     py::class_<actions::Torus>(m,"Torus")
-		    .def("from_true",&actions::Torus::from_true)
-		    .def("from_toy",&actions::Torus::from_toy)
-		    .def("Omega",&actions::Torus::Omega)
-		    .def("density",&actions::Torus::density)
-		    .def("orbit",&actions::Torus::orbit);
+		.def("from_true",&actions::Torus::from_true)
+	    .def("from_toy",&actions::Torus::from_toy)
+	    .def("Omega",&actions::Torus::Omega)
+	    .def("density",&actions::Torus::density)
+	    .def("orbit",&actions::Torus::orbit);
     py::class_<actions::BaseActionFinder,std::shared_ptr<actions::BaseActionFinder>>(m,"BaseActionFinder")
         .def("actionAngles",[] (actions::BaseActionFinder &self, coord::PosVelCyl xv,bool freq=false)
         -> std::variant<actions::ActionAngles,py::list> 
@@ -510,10 +524,10 @@ PYBIND11_MODULE(Py_agama, m) {
             self.epicycle_ratios(J,&r);
             return r;
         })
-        .def("eval",[](df::BaseDistributionFunction &self,const actions::Actions J){
+        .def("eval",[](df::BaseDistributionFunction &self,const double Jzcr, const actions::Actions J){
             int n=self.numValues();
             std::vector<double> vals(n);
-            self.eval(J,&vals[0]);
+            self.eval(J,Jzcr,&vals[0]);
             return vals;
         })
         .def("tab_params",[](df::BaseDistributionFunction &self,std::string filename,const units::InternalUnits &units){

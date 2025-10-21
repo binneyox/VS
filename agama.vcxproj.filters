@@ -13,7 +13,6 @@
     <ClCompile Include="df_disk.cpp" />
     <ClCompile Include="df_ergodic.cpp" />
     <ClCompile Include="df_factory.cpp" />
-    <ClCompile Include="df_halo_new.cpp" />
     <ClCompile Include="df_interpolated.cpp" />
     <ClCompile Include="df_spherical.cpp" />
     <ClCompile Include="galaxymodel_base.cpp" />
@@ -60,6 +59,8 @@
     <ClCompile Include="utils.cpp" />
     <ClCompile Include="utils_config.cpp" />
     <ClCompile Include="actions_harmonicoscillator.cpp" />
+    <ClCompile Include="map.cpp" />
+    <ClCompile Include="df_halo.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="actions_base.h" />
@@ -130,5 +131,6 @@
     <ClInclude Include="utils.h" />
     <ClInclude Include="utils_config.h" />
     <ClInclude Include="actions_harmonicoscillator.h" />
+    <ClInclude Include="map.h" />
   </ItemGroup>
 </Project>

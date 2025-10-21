@@ -158,7 +158,7 @@
     <ClCompile Include="df_disk.cpp" />
     <ClCompile Include="df_ergodic.cpp" />
     <ClCompile Include="df_factory.cpp" />
-    <ClCompile Include="df_halo_new.cpp" />
+    <ClCompile Include="df_halo.cpp" />
     <ClCompile Include="df_interpolated.cpp" />
     <ClCompile Include="df_spherical.cpp" />
     <ClCompile Include="galaxymodel_base.cpp" />
@@ -172,6 +172,7 @@
     <ClCompile Include="galaxymodel_selfconsistent.cpp" />
     <ClCompile Include="galaxymodel_spherical.cpp" />
     <ClCompile Include="galaxymodel_velocitysampler.cpp" />
+    <ClCompile Include="map.cpp" />
     <ClCompile Include="math_core.cpp" />
     <ClCompile Include="math_fit.cpp" />
     <ClCompile Include="math_fourier.cpp" />
@@ -240,6 +241,7 @@
     <ClInclude Include="galaxymodel_spherical.h" />
     <ClInclude Include="galaxymodel_target.h" />
     <ClInclude Include="galaxymodel_velocitysampler.h" />
+    <ClInclude Include="map.h" />
     <ClInclude Include="math_base.h" />
     <ClInclude Include="math_core.h" />
     <ClInclude Include="math_fit.h" />
